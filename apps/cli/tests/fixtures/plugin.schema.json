@@ -109,6 +109,11 @@
             "type": "string",
             "pattern": "^[A-Za-z0-9_-]{1,40}$",
             "description": "A choice row whose value picks the side"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^(/[^?#\\s]*)*(\\?[^#\\s]*)?$",
+            "description": "Where in the plugin's page to open, like /history"
           }
         },
         "additionalProperties": false,

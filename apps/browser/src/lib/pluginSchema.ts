@@ -56,6 +56,7 @@ export function pluginSchema(eventNames: readonly string[]): Record<string, unkn
             context: { type: "boolean", description: "Hand the page the current tab (needs the tabs permission)" },
             side: { enum: [...SPLIT_SIDES], default: "right" },
             sideSetting: { ...key, description: "A choice row whose value picks the side" },
+            path: { type: "string", pattern: "^(/[^?#\\s]*)*(\\?[^#\\s]*)?$", description: "Where in the plugin's page to open, like /history" },
           },
           ["name", "title"],
         ),

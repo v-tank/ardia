@@ -1,6 +1,6 @@
 import { isFields, type Fields } from "./decode";
 import { upgraded, type Migrations } from "./savedDocument";
-import { RESERVED_PAGE_NAMES } from "./pluginNames";
+import { isPagePath, RESERVED_PAGE_NAMES } from "./pluginNames";
 
 export const MANIFEST_VERSION = 1;
 export const MANIFEST_FILE = "plugin.json";
@@ -49,7 +49,7 @@ export type PageSide = (typeof SPLIT_SIDES)[number];
 
 export type CommandAction =
   | { tool: string; input: Fields }
-  | { open: "tab" | "split"; context: boolean; side: PageSide; sideSetting: string | null };
+  | { open: "tab" | "split"; context: boolean; side: PageSide; sideSetting: string | null; path: string };
 export type CommandSpec = { name: string; title: string; icon: string; keywords: string[]; action: CommandAction };
 export type ToolSpec = { name: string; title: string; description: string; timeout: number };
 export type PageSpec = { title: string; icon: string; source: { file: string } | { served: true } };
@@ -197,7 +197,7 @@ function settingsOf(c: Check, value: unknown): PluginManifest["settings"] {
 function command(c: Check, path: string, value: unknown): CommandSpec | null {
   const doc = object(c, path, value);
   if (!doc) return null;
-  only(c, path, doc, ["name", "title", "icon", "keywords", "tool", "input", "open", "context", "side", "sideSetting"]);
+  only(c, path, doc, ["name", "title", "icon", "keywords", "tool", "input", "open", "context", "side", "sideSetting", "path"]);
   const name = matching(c, `${path}.name`, doc.name, NAME, NAME_RULE);
   const title = text(c, `${path}.title`, doc.title, LIMITS.title);
   const icon = matching(c, `${path}.icon`, doc.icon, SYMBOL, "an SF Symbol name", false) ?? "puzzlepiece";
@@ -219,7 +219,8 @@ function command(c: Check, path: string, value: unknown): CommandSpec | null {
     const side = doc.side === undefined ? "right" : (SPLIT_SIDES as readonly unknown[]).includes(doc.side) ? (doc.side as PageSide) : (c.problems.push(`${path}.side must be left, right, top or bottom`), null);
     const sideSetting = doc.sideSetting === undefined ? null : matching(c, `${path}.sideSetting`, doc.sideSetting, KEY, "a row's key");
     if (open !== "split" && (doc.side !== undefined || doc.sideSetting !== undefined)) c.problems.push(`${path}: side and sideSetting only go with open: split`);
-    action = open && side ? { open, context: doc.context === true, side, sideSetting } : null;
+    const pagePath = doc.path === undefined ? "" : typeof doc.path === "string" && isPagePath(doc.path) ? doc.path : (c.problems.push(`${path}.path must be /like/this?q=1`), null);
+    action = open && side && pagePath !== null ? { open, context: doc.context === true, side, sideSetting, path: pagePath } : null;
   }
   return name && title && action ? { name, title, icon, keywords, action } : null;
 }

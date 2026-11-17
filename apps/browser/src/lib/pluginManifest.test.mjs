@@ -14,7 +14,8 @@ test("the example plugin reads with every contribution", () => {
   assert.equal(manifest.name, "example");
   assert.deepEqual(contributionsOf(manifest), [...CONTRIBUTIONS]);
   assert.deepEqual(manifest.page.source, { file: "page/index.html" });
-  assert.deepEqual(manifest.commands.find((c) => c.name === "beside").action, { open: "split", context: true, side: "right", sideSetting: "side" });
+  assert.deepEqual(manifest.commands.find((c) => c.name === "beside").action, { open: "split", context: true, side: "right", sideSetting: "side", path: "" });
+  assert.ok(problems({ ...base(), commands: [{ name: "h", title: "History", open: "tab", path: "/../up" }] }).some((p) => p.includes("path must be")));
   assert.deepEqual(manifest.process, { run: ["/usr/bin/python3", "helper.py"], memoryMB: 256 });
   assert.equal(manifest.tools.find((t) => t.name === "hello").timeout, 5);
 });

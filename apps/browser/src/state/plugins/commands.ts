@@ -38,7 +38,7 @@ async function runCommandSpec(name: string, title: string, command: CommandSpec,
   notePlugin("plugin_commands_run");
   const action = command.action;
   if ("open" in action) {
-    openPluginPage(windowId, name, { split: action.open === "split", side: sideOf(name, action.side, action.sideSetting), context: action.context });
+    openPluginPage(windowId, name, { split: action.open === "split", side: sideOf(name, action.side, action.sideSetting), context: action.context, path: action.path });
     return;
   }
   const outcome = await callTool(name, action.tool, action.input, { kind: "command" });

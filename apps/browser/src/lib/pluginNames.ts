@@ -12,3 +12,8 @@ export const RESERVED_PAGE_NAMES: readonly string[] = [
   "ukm", "usb-internals", "user-actions", "version", "web-app-internals", "webrtc-internals", "webrtc-logs",
   "webui-gallery", "whats-new",
 ];
+
+const PAGE_PATH = /^(\/[A-Za-z0-9._~!$&'()*+,;=:@%-]*)*(\?[^#\s]*)?$/;
+export const MAX_PAGE_PATH = 512;
+
+export const isPagePath = (path: string) => path.length <= MAX_PAGE_PATH && (path === "" || PAGE_PATH.test(path)) && !path.split(/[/?]/).some((part) => part === "..");
