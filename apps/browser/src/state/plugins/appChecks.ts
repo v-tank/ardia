@@ -21,7 +21,7 @@ export const UNTABBED_EVENTS: ReadonlySet<string> = new Set([
 
 const hex = (bytes: Uint8Array) => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 
-export const manifestHash = (text: string) => hex(sha256(text));
+export const manifestHash = (text: string, folderId = "") => hex(sha256(`${text}\u0000${folderId}`));
 
 export function appProblems(m: PluginManifest, settings: Settings, appVersion: string): string[] {
   const problems: string[] = [];
@@ -36,9 +36,9 @@ export function appProblems(m: PluginManifest, settings: Settings, appVersion: s
   return problems;
 }
 
-export function listingOf(name: string, text: string | null, readProblem: string | null, settings: Settings, appVersion: string): PluginListing {
+export function listingOf(name: string, text: string | null, readProblem: string | null, settings: Settings, appVersion: string, folderId = ""): PluginListing {
   if (text === null) return { name, manifest: null, problems: [readProblem ?? "plugin.json couldn't be read"], hash: null };
-  const hash = manifestHash(text);
+  const hash = manifestHash(text, folderId);
   const read = readManifest(text);
   if (!read.manifest) return { name, manifest: null, problems: read.problems, hash };
   const problems = appProblems(read.manifest, settings, appVersion);

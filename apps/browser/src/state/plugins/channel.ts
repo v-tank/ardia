@@ -12,8 +12,8 @@ import { eventTargets, refreshFeed, runMethod, setFeedConsumer, type Body } from
 import { launchToReplay } from "../automation/lifecycleEvents";
 import type { AutomationEventName } from "../automation/eventNames";
 import { activeManifest, currentPlugins, usePlugins } from "./store";
-import { answerCall, callTool } from "./tools";
-import { onProcessStopped, processExited } from "./process";
+import { answerCall, callTool, dropCalls } from "./tools";
+import { acceptsRun, onProcessStopped, processExited } from "./process";
 import { isLoopbackPageUrl } from "./pageUrls";
 import { valuesFor } from "./values";
 
@@ -118,6 +118,7 @@ function reply(c: Connection, id: RequestId, body: Body) {
 }
 
 export function handlePluginLine({ name, run, line }: PluginLine) {
+  if (!acceptsRun(name, run)) return;
   const manifest = activeManifest(currentPlugins(), name);
   const c = connectionFor(name, run);
   const request = parseRequest(line);
@@ -186,6 +187,7 @@ export function startChannels() {
   });
   onPluginExit(processExited);
   onProcessStopped(dropConnections);
+  onProcessStopped(dropCalls);
   setFeedConsumer("plugins", { subscriptions: () => [...connections.values()].flatMap((c) => (c.sub ? [c.sub] : [])), deliver });
 }
 

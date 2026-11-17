@@ -82,6 +82,12 @@ final class ConfigWatcher {
       next.prefixes.append(real + "/")
       streamed.insert(real)
       streamed.insert((real as NSString).deletingLastPathComponent)
+      for entry in (try? FileManager.default.contentsOfDirectory(atPath: real)) ?? [] {
+        guard let target = Self.resolved((real as NSString).appendingPathComponent(entry)), !target.hasPrefix(real + "/") else { continue }
+        next.prefixes.append(target + "/")
+        next.exact.insert(target)
+        streamed.insert(target)
+      }
     }
     let sorted = streamed.sorted()
     next.streamed = sorted.filter { path in !sorted.contains { $0 != path && path.hasPrefix($0 + "/") } }

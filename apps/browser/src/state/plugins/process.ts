@@ -13,6 +13,14 @@ type Supervised = { hash: string; manifest: PluginManifest; failures: number[]; 
 const supervised = new Map<string, Supervised>();
 const stopListeners = new Set<(name: string) => void>();
 let tokens = 0;
+let highestRun = 0;
+
+export function acceptsRun(name: string, run: number): boolean {
+  if (!supervised.has(name)) return false;
+  const state = usePlugins.getState().processes[name];
+  if (state?.state === "running") return run === state.run;
+  return state?.state === "starting" && run > highestRun;
+}
 
 export const onProcessStopped = (listener: (name: string) => void) => {
   stopListeners.add(listener);
@@ -46,6 +54,7 @@ async function launch(name: string, entry: Supervised) {
     if (started.ok) void stopPluginProcess(name, started.run, 0);
     return;
   }
+  if (started.ok) highestRun = Math.max(highestRun, started.run);
   if (!started.ok) return setProcess(name, { state: "failed", reason: started.reason });
   notePlugin("plugin_process_starts");
   setProcess(name, { state: "running", run: started.run, since: Date.now() });

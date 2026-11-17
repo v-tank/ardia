@@ -159,15 +159,17 @@ named Ardia settings, offering tools.
 
 A plugin you install is off. Turning it on in Settings › Plugins shows what it gets, in words built from the
 manifest ("Runs a program in the background: /usr/bin/python3 helper.py", "Sees the address and title of your tabs",
-"Runs Ardia commands", "Connects to the internet", "Changes these settings: commandBarStart", "Adds a page you open as a tab", …). Turn On approves that exact manifest: Ardia keeps the SHA-256 of the manifest's text in `plugins.json`.
+"Runs Ardia commands", "Connects to the internet", "Changes these settings: commandBarStart", "Adds a page you open as a tab", …). Turn On approves that exact manifest in that exact folder: Ardia keeps the SHA-256 of the manifest's text and the
+plugin folder's identity on disk (device and inode, after links) in `plugins.json`.
 
 - **A changed manifest needs a new approval.** If `plugin.json` changes while the plugin is on, the plugin stops (its
   helper, page, commands, hooks and tools all go) and its row says it changed and asks you to review it. Settings
   defaults stay applied until you turn it off.
 - Files beside the manifest (the helper's code, the page's files) aren't covered by the approval, like a hook's
   program in `hooks.json`: whoever can write your config folder can already change what Ardia runs. The approval is
-  for the manifest's declarations, not for the code. `ardia plugins install --force` turns the plugin off in a running
-  Ardia before replacing its files, so a replaced plugin arrives off.
+  for the manifest's declarations, not for the code. A folder replaced on disk (`ardia plugins install --force` always
+  installs a new folder, then swaps it in) is a new folder, so the plugin needs a new approval even with the same
+  manifest and even when Ardia wasn't running; a running Ardia is also asked to turn it off first.
 - `ardia plugins enable NAME` opens the same sheet in Ardia; it never turns a plugin on by itself.
 - Turning off: the helper stops, its page tabs say it's off, commands, rows, hooks and tools go, and settings defaults
   go back.
@@ -253,7 +255,7 @@ whichever profile the tab's window shows:
   reach the interface's JavaScript, the store or any native call. It gets no camera, microphone or location, downloads
   are refused, and its JavaScript dialogs are ignored.
 - **Its network follows the plugin's.** Without `network`, the page's own requests (scripts, images, `fetch`,
-  WebSockets) may only reach its own origin and this Mac: a file page gets a Content Security Policy in its response
+  WebSockets) may only reach its own origin and this Mac, and it can't start workers: a file page gets a Content Security Policy in its response
   header, a helper-served page the same policy as a meta tag at document start.
 - **Stays on its origin.** Its own origin may navigate freely; a link you click to any other http(s) address opens
   as a new tab in the window's profile (where your cookies apply, as for any link you open), and every other

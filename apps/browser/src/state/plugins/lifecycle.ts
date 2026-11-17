@@ -5,7 +5,7 @@ import { onConfigChange } from "../../platform/configFolder";
 import { useBrowser } from "../browser/store";
 import { notePlugin } from "../telemetry/pluginCounts";
 import { listingOf } from "./appChecks";
-import { applyDefaults, restoreDefaults, spliceApplied } from "./defaults";
+import { applyDefaults, claimsOf, restoreDefaults, spliceApplied } from "./defaults";
 import { writePluginRecords } from "./savedState";
 import { activeManifest, currentPlugins, NO_RECORD, recordOf, usePlugins, type PluginListing, type PluginRecord } from "./store";
 import { stopProcess, superviseProcess, supervisedNames } from "./process";
@@ -26,7 +26,7 @@ export function listingsOf(entries: PluginFolderEntry[]): PluginListing[] {
   const version = systemInfo().appVersion;
   return entries
     .slice(0, MAX_PLUGINS)
-    .map((e) => listingOf(e.name, e.status === "ok" ? (e.text ?? "") : null, e.status === "ok" ? null : READ_PROBLEMS[e.status], settings, version));
+    .map((e) => listingOf(e.name, e.status === "ok" ? (e.text ?? "") : null, e.status === "ok" ? null : READ_PROBLEMS[e.status], settings, version, e.folderId ?? ""));
 }
 
 function saveRecords(records: Record<string, PluginRecord>): boolean {
@@ -111,8 +111,9 @@ export function enablePlugin(name: string, hash: string): boolean {
   const before = recordOf(currentPlugins(), name);
   const values = { ...defaultValues(manifest), ...before.values };
   const kept = before.enabled && before.approved === hash;
-  if (!kept) restoreDefaults(before.applied);
-  const applied = kept ? before.applied : applyDefaults(manifest);
+  const claims = claimsOf(currentPlugins().records, name);
+  if (!kept) restoreDefaults(before.applied, claims);
+  const applied = kept ? before.applied : applyDefaults(manifest, claims);
   const saved = updateRecord(name, () => ({ enabled: true, approved: hash, values, applied }));
   if (!saved) return false;
   usePlugins.setState({ consent: null });
@@ -124,7 +125,7 @@ export function enablePlugin(name: string, hash: string): boolean {
 export function disablePlugin(name: string): boolean {
   const before = recordOf(currentPlugins(), name);
   if (!before.enabled) return true;
-  restoreDefaults(before.applied);
+  restoreDefaults(before.applied, claimsOf(currentPlugins().records, name));
   const records = spliceApplied(currentPlugins().records, name);
   const saved = saveRecords({ ...records, [name]: { ...before, enabled: false, applied: {} } });
   notePlugin("plugin_disables");

@@ -5,6 +5,7 @@ export type PluginFolderEntry = {
   name: string;
   status: "ok" | "missing" | "notFile" | "tooBig" | "unreadable";
   text?: string;
+  folderId?: string;
 };
 
 export type PluginStartSpec = { name: string; run: string[]; memoryMB: number; network: boolean };

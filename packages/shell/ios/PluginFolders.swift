@@ -55,6 +55,10 @@ struct PluginFolders {
       let manifest = ((pluginsLexical as NSString).appendingPathComponent(name) as NSString).appendingPathComponent(Self.manifestName)
       var entry = ConfigFolder.readRegularFile(manifest)
       entry["name"] = name
+      var info = stat()
+      if let real = PluginSandbox.resolved((pluginsLexical as NSString).appendingPathComponent(name)), stat(real, &info) == 0 {
+        entry["folderId"] = "\(info.st_dev):\(info.st_ino)"
+      }
       return entry
     }
   }

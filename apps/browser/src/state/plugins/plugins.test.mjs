@@ -354,3 +354,41 @@ test("a served page keeps its server's fragment when it gets a path or a context
   assert.equal(pageViewUrl(P(), "example", context, ""), `http://127.0.0.1:4321/app/?v=1&ardiaContext=${encodeURIComponent(JSON.stringify(context))}#k=secret`);
   lifecycle.disablePlugin("example");
 });
+
+test("a plugin folder replaced on disk needs a new approval, even with the same plugin.json", async () => {
+  await enabled();
+  host.folders = [{ name: "example", status: "ok", text: FIXTURE, folderId: "1:200" }];
+  await lifecycle.rescanPlugins();
+  assert.ok(needsReview(P(), "example"), "a new folder identity is a change");
+  assert.equal(activeManifest(P(), "example"), null);
+  lifecycle.disablePlugin("example");
+});
+
+test("two plugins setting the same value: turning the first off keeps it while the second is on", async () => {
+  S().hydrate({});
+  for (const name of Object.keys(P().records)) lifecycle.disablePlugin(name);
+  const original = S().settings.commandBarStart;
+  const twin = JSON.parse(FIXTURE);
+  twin.name = "twin";
+  host.folders = [{ name: "example", status: "ok", text: FIXTURE }, { name: "twin", status: "ok", text: JSON.stringify(twin) }];
+  await lifecycle.rescanPlugins();
+  for (const name of ["example", "twin"]) assert.ok(lifecycle.requestPluginConsent(name) && lifecycle.enablePlugin(name, P().consent.hash));
+  lifecycle.disablePlugin("example");
+  assert.deepEqual(S().settings.commandBarStart, { openTabs: { limit: 5 } });
+  lifecycle.disablePlugin("twin");
+  assert.deepEqual(S().settings.commandBarStart, original);
+});
+
+test("a stopped helper's requests are ignored and its pending calls fail at once", async () => {
+  const run = await enabled();
+  const pending = callTool("example", "seen", {}, { kind: "cli" });
+  await settle();
+  lifecycle.disablePlugin("example");
+  const outcome = await pending;
+  assert.equal(outcome.ok, false);
+  assert.match(outcome.message, /stopped/);
+  const before = host.replies.length;
+  stub.emitPluginLine({ name: "example", run, line: JSON.stringify({ id: 1, method: "run", params: { command: "newTab" } }) });
+  await settle();
+  assert.equal(host.replies.length, before, "nothing answers, nothing runs");
+});

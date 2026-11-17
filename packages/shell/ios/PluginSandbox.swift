@@ -72,11 +72,13 @@ struct PluginSandbox {
     for path in [pluginFolder, pluginData, program] where path.isEmpty || path.contains("\0") {
       throw Refusal.unsafe("a path the sandbox can't name")
     }
-    if pluginFolder == "/" || [home, configFolder].contains(where: { Self.isInside($0, pluginFolder) }) || Self.overlaps(pluginFolder, appData) {
+    let pluginsRoot = (configFolder as NSString).appendingPathComponent("plugins")
+    let inPluginsRoot = Self.isInside(pluginFolder, pluginsRoot) && pluginFolder != pluginsRoot
+    if pluginFolder == "/" || [home, configFolder, appData].contains(where: { Self.isInside($0, pluginFolder) }) {
       throw Refusal.unsafe("its folder takes in Ardia's data, its settings or your home folder")
     }
-    if Self.isInside(pluginFolder, configFolder) && !Self.isInside(pluginFolder, (configFolder as NSString).appendingPathComponent("plugins")) {
-      throw Refusal.unsafe("its folder is in Ardia's config folder")
+    if (Self.isInside(pluginFolder, configFolder) || Self.isInside(pluginFolder, appData)) && !inPluginsRoot {
+      throw Refusal.unsafe("its folder is in Ardia's data or config folder")
     }
     if !Self.isInside(program, pluginFolder) && (Self.isInside(program, appData) || Self.isInside(program, configFolder)) {
       throw Refusal.unsafe("its program is in Ardia's data or config folder")

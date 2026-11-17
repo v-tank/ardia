@@ -10,6 +10,7 @@ final class PluginHost {
   private let queue = DispatchQueue(label: "ardia.plugins", qos: .userInitiated)
   private var sink: (owner: ObjectIdentifier, send: Sink)?
   private var processes: [String: PluginProcess] = [:]
+  private var retiring: [ObjectIdentifier: PluginProcess] = [:]
   private var nextRun = 0
   private var quitObserver: NSObjectProtocol?
 
@@ -32,16 +33,24 @@ final class PluginHost {
     }
   }
 
+  private func retire(_ process: PluginProcess) {
+    if !process.exited { retiring[ObjectIdentifier(process)] = process }
+  }
+
   private func terminateAll() {
-    let all = Array(processes.values)
+    let all = Array(processes.values) + Array(retiring.values)
     processes.removeAll()
+    retiring.removeAll()
     for process in all { process.terminateForQuit(within: Self.quitGrace / Double(max(1, all.count))) }
   }
 
   func start(_ spec: PluginProcess.Spec, done: @escaping ([String: Any]) -> Void) {
     queue.async { [self] in
       guard let folders = PluginFolders.current() else { return done(["ok": false, "reason": "Ardia has no data folder"]) }
-      if let old = processes.removeValue(forKey: spec.name) { old.killNow() }
+      if let old = processes.removeValue(forKey: spec.name) {
+        retire(old)
+        old.killNow()
+      }
       nextRun += 1
       let result = PluginProcess.spawn(
         spec, run: nextRun, folders: folders, queue: queue,
@@ -51,6 +60,7 @@ final class PluginHost {
         onExit: { [weak self] process, status, signal, overMemory in
           guard let self else { return }
           if self.processes[process.name] === process { self.processes.removeValue(forKey: process.name) }
+          self.retiring.removeValue(forKey: ObjectIdentifier(process))
           self.sink?.send(
             "onExit",
             ["name": process.name, "run": process.run, "status": status.map { Int($0) } ?? NSNull(), "signal": signal.map { Int($0) } ?? NSNull(), "overMemory": overMemory])
@@ -70,6 +80,7 @@ final class PluginHost {
     queue.async { [self] in
       guard let process = processes[name], run == 0 || process.run == run else { return done() }
       processes.removeValue(forKey: name)
+      retire(process)
       process.stop(graceMs: graceMs, done: done)
     }
   }
@@ -110,7 +121,12 @@ final class PluginHost {
         let problem = PluginFolders.current().map { $0.remove(name) } ?? "Ardia has no data folder."
         DispatchQueue.main.async { done(problem) }
       }
-      if let process = processes.removeValue(forKey: name) { process.stop(graceMs: 1000, done: { finish() }) } else { finish() }
+      if let process = processes.removeValue(forKey: name) {
+        retire(process)
+        process.stop(graceMs: 1000, done: { finish() })
+      } else {
+        finish()
+      }
     }
   }
 }

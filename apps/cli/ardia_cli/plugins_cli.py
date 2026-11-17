@@ -169,7 +169,7 @@ def cmd_install(args) -> int:
         try:
             ask(args, "plugins.disable", {"name": name})
         except (Unreachable, MethodError):
-            complain(f"ardia plugins install: Ardia isn't reachable, so if {name} was on it stays on with the new files until its plugin.json changes")
+            pass
     folder.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f".{name}.", dir=folder))
     try:

@@ -15,7 +15,7 @@ final class PluginPageView: ExpoView, WKNavigationDelegate, WKUIDelegate {
   var network = false { didSet { if network != oldValue { rebuild() } } }
 
   static let offlinePolicy =
-    "default-src 'self' ardia-plugin: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ardia-plugin: http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; form-action 'self'"
+    "default-src 'self' ardia-plugin: data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ardia-plugin: http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; form-action 'self'; worker-src 'none'"
 
   static func offlineScript() -> WKUserScript {
     let source = """
