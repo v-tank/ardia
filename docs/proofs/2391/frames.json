@@ -1,0 +1,99 @@
+{
+  "before": {
+    "status": "fail",
+    "checks": {
+      "commandBar-keyboard": {
+        "sampledFrames": 36,
+        "switchedFrames": 24,
+        "switchedFramesWithNewTab": 0,
+        "firstSwitchedFrame": {
+          "active": "main-tab-0",
+          "lingering": false,
+          "panel": false
+        }
+      },
+      "commandBar-sidebar": {
+        "sampledFrames": 37,
+        "switchedFrames": 35,
+        "switchedFramesWithNewTab": 0,
+        "firstSwitchedFrame": {
+          "active": "main-tab-0",
+          "lingering": false,
+          "panel": false
+        }
+      },
+      "page-keyboard": {
+        "sampledFrames": 12,
+        "switchedFrames": 6,
+        "switchedFramesWithNewTab": 6,
+        "firstSwitchedFrame": {
+          "active": "main-tab-1",
+          "lingering": true,
+          "panel": false
+        }
+      },
+      "page-sidebar": {
+        "sampledFrames": 11,
+        "switchedFrames": 10,
+        "switchedFramesWithNewTab": 6,
+        "firstSwitchedFrame": {
+          "active": "main-tab-0",
+          "lingering": true,
+          "panel": false
+        }
+      }
+    }
+  },
+  "after": {
+    "status": "pass",
+    "checks": {
+      "commandBar-keyboard": {
+        "sampledFrames": 36,
+        "switchedFrames": 24,
+        "switchedFramesWithNewTab": 0,
+        "firstSwitchedFrame": {
+          "active": "main-tab-0",
+          "lingering": false,
+          "panel": false
+        }
+      },
+      "commandBar-sidebar": {
+        "sampledFrames": 37,
+        "switchedFrames": 35,
+        "switchedFramesWithNewTab": 0,
+        "firstSwitchedFrame": {
+          "active": "main-tab-0",
+          "lingering": false,
+          "panel": false
+        }
+      },
+      "page-keyboard": {
+        "sampledFrames": 18,
+        "switchedFrames": 13,
+        "switchedFramesWithNewTab": 0,
+        "firstSwitchedFrame": {
+          "active": "main-tab-1",
+          "lingering": false,
+          "panel": false
+        }
+      },
+      "page-sidebar": {
+        "sampledFrames": 26,
+        "switchedFrames": 24,
+        "switchedFramesWithNewTab": 0,
+        "firstSwitchedFrame": {
+          "active": "main-tab-0",
+          "lingering": false,
+          "panel": false
+        }
+      }
+    }
+  },
+  "engine": {
+    "engine_key": "3a64a10704ff3e7a83790421b08cb5b7fbf03f0f",
+    "source_commit": "1bd3ca961ed9d0fa19620ffc8e8917354971546a",
+    "chromium_version": "157.0.8103.50",
+    "chrome_sha256": "4a7cb6b15f40f71ed380e4ba8068fbadfb0b3b1d53e3899b33faecc1993f11b2"
+  },
+  "baseline": "The original card.ts from f7ea7b482, compiled with the same current UI and the same engine as the fixed run."
+}
