@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
 import type { PluginManifest, RowSpec } from "../../../lib/pluginManifest";
 import { PLATFORM_FEATURES } from "../../../lib/platformFeatures";
@@ -28,8 +28,15 @@ import { PaneSubPage } from "./PaneSubPage";
 
 export function PluginsPane({ detail }: SettingsPlace) {
   const consent = usePluginConsent();
+  const showing = useRef(false);
   useEffect(() => {
-    if (consent) showSettingsSheet(<ConsentSheet name={consent.name} hash={consent.hash} />);
+    if (consent) {
+      showing.current = true;
+      showSettingsSheet(<ConsentSheet name={consent.name} hash={consent.hash} />);
+    } else if (showing.current) {
+      showing.current = false;
+      closeSettingsSheet();
+    }
   }, [consent?.name, consent?.hash]);
   if (!PLATFORM_FEATURES.plugins) return <UnavailablePage />;
   return detail ? <PluginPage name={detail} /> : <PluginList />;
