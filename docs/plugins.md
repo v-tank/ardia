@@ -97,7 +97,7 @@ command does one of two things:
   new one), or in Split View beside the current tab, on `side` (`left`, `right`, the default, `top` or `bottom`), or on
   the side a `choice` row named by `sideSetting` holds (its values must be sides). `"context": true` hands the page the
   current tab (its id, title and URL, without the query and fragment unless the plugin has `fullUrls`), and needs
-  `tabs`.
+  `tabs`. `path` (`/history`, `/chats/new?mode=split`) opens the page there.
 
 A plugin with a `page` also gets "Open `<page title>`" for free.
 
