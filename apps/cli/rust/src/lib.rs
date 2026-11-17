@@ -260,6 +260,7 @@ pub fn run() -> i32 {
     let raw: Vec<OsString> = std::env::args_os().skip(1).collect();
     let root = install_root();
     let python = root.as_ref().map(|root| root.join("python").join("bin").join("python3"));
+    let _lease = Lease::take(root.as_deref());
     let Some(argv) = raw.iter().map(|arg| arg.to_str().map(str::to_string)).collect::<Option<Vec<String>>>() else {
         return pass_through(python.as_deref(), &raw);
     };
@@ -267,7 +268,6 @@ pub fn run() -> i32 {
     if route == Route::Python || (route != Route::Version && (!paths::paths_are_text() || telemetry::consent_unreadable(&argv))) {
         return pass_through(python.as_deref(), &raw);
     }
-    let lease = Lease::take(root.as_deref());
     let served = match route {
         Route::Version => {
             let _ = writeln!(std::io::stdout(), "ardia {}", telemetry::version());
@@ -277,7 +277,6 @@ pub fn run() -> i32 {
         Route::Listing(kind, listing) => serve_listing(kind, &listing, &argv, python.as_deref()),
         Route::Python => None,
     };
-    drop(lease);
     match served {
         Some(status) => status,
         None => pass_through(python.as_deref(), &raw),

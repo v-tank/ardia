@@ -1603,8 +1603,8 @@ The app runs `install.sh` with its own environment minus every `ARDIA_*` variabl
   tree, plus names with control characters, backslashes or ` -> `, extracts to `$ARDIA_CLI_HOME/<V>.partial`, checks
   the extracted tree again (`find`, no line parsing), renames it to `<V>`, and swaps `current` atomically.
 - It keeps the current and the previous version, and any version a running `ardia` uses: `ardia_cli` writes
-  `<V>/.leases/<pid>` when it starts (the Rust `bin/ardia` for a command it serves, `ardia_cli` for the rest, under
-the same pid since the binary `exec`s Python) and removes it at exit. A lease
+  `<V>/.leases/<pid>` when it starts (the Rust `bin/ardia` writes it first and keeps it through the hand-off, since it
+`exec`s Python under the same pid; `ardia_cli` rewrites it at start) and removes it at exit. A lease
   counts only while a process with that pid runs and started no later than the lease was written (`ps -o lstart`
   against the lease's mtime), so a reused pid doesn't pin a version.
 - Links `$ARDIA_CLI_BIN_DIR/ardia` (default `~/.local/bin`) to `current/bin/ardia`. It replaces only a link that

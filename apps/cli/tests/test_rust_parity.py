@@ -394,6 +394,34 @@ class RustParity(unittest.TestCase):
             collector.shutdown()
             collector.server_close()
 
+    def test_the_lease_is_held_through_the_hand_off_to_python(self):
+        leases = self.root / ".leases"
+        leases.mkdir(exist_ok=True)
+        packages = subprocess.run([str(self.python), "-I", "-c", "import site; print(site.getsitepackages()[0])"], check=True, capture_output=True, text=True).stdout.strip()
+        probe_hook = Path(packages) / "ardia-lease-probe.pth"
+        probe_hook.write_text('import os, sys; probe = os.environ.get("ARDIA_LEASE_PROBE"); probe and open(probe, "a").write(str(os.path.exists(os.path.join(os.environ["ARDIA_LEASE_DIR"], str(os.getpid()))))[0] + " " + sys.argv[1] + "\\n")\n')
+        data = self.case / "data"
+        data.mkdir()
+        fake = FakeArdia(data / "ArdiaControl.sock", {"hello": {"result": {"app": "Ardia"}}, "workspace": {"result": 3}})
+        probe = self.case / "probe"
+        try:
+            for argv in (["config", "path"], ["tabs"]):
+                env = self.environment({"ARDIA_LEASE_PROBE": str(probe), "ARDIA_LEASE_DIR": str(leases)})
+                done = subprocess.run([str(self.root / "bin" / "ardia"), *argv], capture_output=True, env=env, timeout=30)
+                self.assertIn(done.returncode, (0, 3), done.stderr)
+            self.assertEqual(set(probe.read_text().splitlines()), {"T config", "T tabs"}, "Python started without this pid's lease")
+        finally:
+            probe_hook.unlink()
+            fake.close()
+            shutil.rmtree(leases, True)
+        bare = self.case / "bare"
+        (bare / "bin").mkdir(parents=True)
+        (bare / ".leases").mkdir()
+        shutil.copy2(self.root / "bin" / "ardia", bare / "bin" / "ardia")
+        done = subprocess.run([str(bare / "bin" / "ardia"), "config", "path"], capture_output=True, env=self.environment({}), timeout=30)
+        self.assertEqual(done.returncode, 127)
+        self.assertEqual(os.listdir(bare / ".leases"), [])
+
     def test_a_lease_is_held_while_it_runs(self):
         leases = self.root / ".leases"
         leases.mkdir(exist_ok=True)
