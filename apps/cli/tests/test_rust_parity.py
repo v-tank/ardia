@@ -285,6 +285,7 @@ class RustParity(unittest.TestCase):
             deadline = time.monotonic() + 20
             while not any(method == "subscribe" for method, _ in fake.requests) and time.monotonic() < deadline:
                 time.sleep(0.05)
+            self.assertIn("subscribe", [method for method, _ in fake.requests], "ardia events never subscribed")
             events.send_signal(signal.SIGINT)
             time.sleep(1)
             self.assertIsNone(events.poll(), events.stderr.read() if events.poll() is not None else "")

@@ -200,7 +200,9 @@ telemetry are Python's own. It also hands over whenever it can't be sure to matc
 flag after a command), an argument that isn't UTF-8, a terminal so narrow that argparse would wrap the usage line, or
 a reply whose shape Python would print differently or crash on (a tree that isn't an object, a window that isn't one,
 a non-ASCII string inside a list printed with `repr`). For a reply it renders the whole output first and prints
-nothing until it knows it can, then hands over, and Python asks Ardia again: these are read-only calls.
+nothing until it knows it can, then hands over, and Python asks Ardia again: these are read-only calls. The one
+deliberate difference: when stdout's reader has already closed, `ardia --help` and `ardia --version` exit 0 quietly,
+where Python prints a `BrokenPipeError` and exits 120.
 
 What the native commands need is ported with them: the data dir (`endpoint.rs`: `--data-dir`, `$ARDIA_DATA_DIR`,
 else the installed app's), the control socket client (`control.rs`: the path length and owner checks, a non-blocking connect with its 5 s limit, the peer uid through `LOCAL_PEERCRED` or `SO_PEERCRED`,

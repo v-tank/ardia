@@ -19,7 +19,7 @@ on:
       - "tsconfig.base.json"
       - ".nvmrc"
       - "patches/**"
-      - ".github/workflows/checks.yml"
+      - ".github/workflows/**"
   push:
     branches: [main]
     paths: *code
