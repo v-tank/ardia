@@ -79,4 +79,16 @@ extension PluginSandboxTests {
     try FileManager.default.createSymbolicLink(atPath: "\(home)/.out", withDestinationPath: root)
     XCTAssertNotNil(grantRefusal([("~/.out", false)]), "a link that leads outside home")
   }
+
+  func testAPluginFolderInsideHomeResolvesItsOwnPath() throws {
+    let insideHome = "\(home)/.config/ardia"
+    let folder = "\(insideHome)/plugins/example"
+    try FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+    try "x".write(toFile: "\(folder)/file.txt", atomically: true, encoding: .utf8)
+    let box = PluginSandbox(home: home, appData: data, configFolder: insideHome, pluginFolder: folder, pluginData: pluginData, program: "/bin/sh", network: false)
+    XCTAssertEqual(try run(box, "/bin/realpath '\(folder)/file.txt'"), 0, "a runtime resolving its own path can stat the folders above it")
+    XCTAssertEqual(try run(box, "cat '\(folder)/file.txt'"), 0)
+    XCTAssertNotEqual(try run(box, "ls '\(home)/.config'"), 0, "the folders above stay unlistable")
+    XCTAssertNotEqual(try run(box, "cat '\(insideHome)/config.json'"), 0, "and their files unreadable")
+  }
 }

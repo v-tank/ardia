@@ -167,9 +167,23 @@ struct PluginSandbox {
     return (text, parameters)
   }
 
+  func pathRules() -> (text: String, parameters: [String: String]) {
+    var text = ""
+    var parameters: [String: String] = [:]
+    let chain = Set([pluginFolder, program, pluginData].flatMap { Self.ancestors(of: $0, below: home) })
+    for (step, folder) in chain.sorted().enumerated() {
+      let name = "PATH_UP_\(step)"
+      parameters[name] = folder
+      text += "\n(allow file-read-metadata (literal (param \"\(name)\")))"
+    }
+    return (text, parameters)
+  }
+
   func arguments() throws -> [String] {
     try checked()
-    let rules = grantRules()
+    let grantPart = grantRules()
+    let pathPart = pathRules()
+    let rules = (text: grantPart.text + pathPart.text, parameters: grantPart.parameters.merging(pathPart.parameters) { first, _ in first })
     let parameters = [
       "HOME": home, "APP_DATA": appData, "CONFIG": configFolder, "PLUGIN": pluginFolder, "DATA": pluginData, "PROGRAM": program,
       "INSTALL": installFolder(),
