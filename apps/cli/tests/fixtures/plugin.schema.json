@@ -286,6 +286,36 @@
           "title"
         ]
       }
+    },
+    "toolbar": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,40}$"
+        },
+        "icon": {
+          "type": "string",
+          "pattern": "^[a-z0-9.]{1,64}$",
+          "description": "An SF Symbol name"
+        },
+        "command": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{0,39}$",
+          "description": "One of the plugin's commands, run when the button is pressed"
+        },
+        "shortcut": {
+          "type": "string",
+          "pattern": "^[\\s\\S]{1,40}$",
+          "description": "A shortcut like \"cmd+shift+e\", written as in config.json; one Ardia already uses is refused"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "icon",
+        "command"
+      ]
     }
   },
   "additionalProperties": false,

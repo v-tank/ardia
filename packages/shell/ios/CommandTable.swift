@@ -114,6 +114,7 @@ enum CommandTable {
     case moveTabUp
     case closeTabGroup
     case openProfileMenu
+    case runPluginCommand
   }
 
   static let titles: [String: String] = [

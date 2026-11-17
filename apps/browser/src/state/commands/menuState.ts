@@ -19,6 +19,7 @@ import { menuBarBindings } from "./commandShortcuts";
 import { focusedWindowOf } from "../windows/ui";
 import { clearableRecentlyClosed, closedWindowTitle, newestClosed, recentlyClosedIn } from "../windows/recentlyClosedList";
 import { BOOKMARK_COMMANDS, bookmarksShown } from "../bookmarks/visibility";
+import { pluginMenuCommands } from "../plugins/surfaces";
 
 function menuBookmarks(b: Bookmarks, folderId: string, depth = 0): MenuBookmark[] {
   return folderChildren(b, folderId).map((n: BookmarkNode) =>
@@ -142,7 +143,8 @@ export function menuState(s: BrowserState): MenuState {
     undoReopensClosedTab: s.settings.undoReopensClosedTab,
     downloadsInProgress: s.downloads.filter((d) => d.state === "downloading").length,
     shortcuts: menuBarBindings(s),
-    extensions: extensionMenu(s, windowId) };
+    extensions: extensionMenu(s, windowId),
+    plugins: pluginMenuCommands() };
 }
 
 export type MenuReads = ReadonlySet<keyof BrowserState>;

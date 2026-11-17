@@ -3,7 +3,7 @@
   "manifest": 1,
   "name": "example",
   "title": "Example",
-  "description": "Uses every contribution: settings, commands, a page, a helper, hooks and tools.",
+  "description": "Uses every contribution: settings, commands, a toolbar button, a page, a helper, hooks and tools.",
   "version": "1.0.0",
   "permissions": [
     "tabs",
@@ -94,6 +94,12 @@
       "sideSetting": "side"
     }
   ],
+  "toolbar": {
+    "title": "Say Hello",
+    "icon": "hand.wave",
+    "command": "say-hello",
+    "shortcut": "ctrl+opt+cmd+h"
+  },
   "page": {
     "title": "Example",
     "icon": "sparkles",

@@ -164,6 +164,7 @@ export const COMMANDS = {
   moveTabUp: { title: "Move Tab Up", keys: ["⌃⇧⇞"], ...windowOffInLittleArdia },
   closeTabGroup: { title: "Close Group", keys: ["⌃⌘W"], ...windowOffInLittleArdia },
   openProfileMenu: { title: "Show Profiles Menu", keys: ["⇧⌘M"], ...inWindow },
+  runPluginCommand: inWindow,
 } as const satisfies Record<BrowserCommand, CommandSpec>;
 
 const SPECS: Readonly<Record<BrowserCommand, CommandSpec>> = COMMANDS;
@@ -222,11 +223,13 @@ export const SPLIT_VIEW_COMMANDS: readonly BrowserCommand[] = ["openSplitPane", 
 export const EXPORT_COMMANDS: readonly BrowserCommand[] = ["exportBookmarks"];
 export const WEBKIT_COMMANDS: readonly BrowserCommand[] = ["togglePageEngine"];
 export const HIDING_COMMANDS: readonly BrowserCommand[] = ["hideElement", "showHiddenElements"];
+export const PLUGIN_COMMANDS: readonly BrowserCommand[] = ["runPluginCommand"];
 export const UNAVAILABLE_COMMANDS: ReadonlySet<string> = new Set([
   ...(splitViewAvailable ? [] : SPLIT_VIEW_COMMANDS),
   ...(PLATFORM_FEATURES.exportsBookmarksAndPasswords ? [] : EXPORT_COMMANDS),
   ...(PLATFORM_FEATURES.webKit ? [] : WEBKIT_COMMANDS),
   ...(PLATFORM_FEATURES.contentBlocker ? [] : HIDING_COMMANDS),
+  ...(PLATFORM_FEATURES.plugins ? [] : PLUGIN_COMMANDS),
 ]);
 export const LITTLE_ARDIA_PAGE_COMMANDS: ReadonlySet<string> = new Set(commandsWhere((c) => c.littleArdia === "page"));
 
@@ -265,7 +268,7 @@ export function commandBarTitle(command: BrowserCommand, arg?: string): string {
 
 export const commandSymbol = (command: BrowserCommand, arg?: string): string | undefined => variantOf(command, arg).symbol ?? SPECS[command].symbol;
 
-const PROFILE_SHORTCUT_COUNT = 9;
+export const PROFILE_SHORTCUT_COUNT = 9;
 const OVERRIDABLE_PER_ITEM_COMMANDS: readonly BrowserCommand[] = ["openExtension"];
 
 const source = (id: string, keys: Keys = []): ShortcutSource => ({ id, keys: keys.map(parseShortcut) });

@@ -1,4 +1,11 @@
 import AppKit
+import ExpoModulesCore
+
+struct MenuPluginCommand: Record {
+  @Field var id: String = ""
+  @Field var title: String = ""
+  @Field var icon: String = ""
+}
 
 struct MenuState {
   static var current = MenuState()
@@ -21,6 +28,7 @@ struct MenuState {
   var downloadsInProgress = 0
   var shortcuts: [String: [[String]]] = [:]
   var extensions: [MenuExtension] = []
+  var plugins: [MenuPluginCommand] = []
   var fromApp = false
 
   init() {}
@@ -41,6 +49,7 @@ struct MenuState {
     downloadsInProgress = update.downloadsInProgress
     shortcuts = update.shortcuts
     extensions = update.extensions
+    plugins = update.plugins
     fromApp = true
   }
 

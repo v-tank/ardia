@@ -232,6 +232,8 @@ native selectors. Refused (`refused`), and left out of `commands`:
 - anything that changes which engine shows a page (`togglePageEngine`, its sign-in transfer);
 - anything whose effect is a setting the config allowlist leaves out (`docs/config.md`), however it is stored;
 - anything touching control itself;
+- a plugin's toolbar command (`runPluginCommand`), so a helper with `commands` can't run another plugin's command and
+  reach its tools that way; `ardia plugins call` calls a plugin's tools with their own checks;
 - for now, commands that need an argument other than a variant id (a profile, window, bookmark, extension, folder
   or closed-item id: `switchProfile`, `moveTabToWindow`, `openBookmark`, …). An `arg` that isn't one of the
   command's variants is `bad_request`.

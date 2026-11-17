@@ -70,9 +70,9 @@ import { isWebPageUrl } from "../../lib/url";
 import { findStep, openFind } from "../find/actions";
 import { runHidingCommand } from "../site/hiddenElements";
 import { requestWindowClose } from "../windows/windowClose";
+import { runPluginCommand } from "../plugins/surfaces";
 
 const newOrId = (arg: string) => (arg === "new" ? null : arg);
-
 export class NoCommandWindowError extends Error {}
 
 export function runCommand({ command, arg, windowId: requested }: CommandEvent, { strictWindow = false, tabId: targetTab = null }: { strictWindow?: boolean; tabId?: string | null } = {}) {
@@ -331,6 +331,7 @@ export function runCommand({ command, arg, windowId: requested }: CommandEvent, 
       return cycleProfile(windowId, -1);
     case "openExtension":
       return arg ? openExtensionFromMenu(windowId, arg, tabId) : undefined;
+    case "runPluginCommand": return arg ? void runPluginCommand(arg, windowId, "menu") : undefined;
     case "addExtension":
       return void openWebStore(windowId);
     case "pinExtensions":

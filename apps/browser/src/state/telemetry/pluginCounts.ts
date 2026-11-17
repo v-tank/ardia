@@ -20,6 +20,8 @@ const NONE = {
   plugin_banners_shown: 0,
   plugin_banner_stops: 0,
   plugin_values_set: 0,
+  plugin_toolbar_presses: 0,
+  plugin_menu_runs: 0,
 };
 
 export type PluginCount = keyof typeof NONE;

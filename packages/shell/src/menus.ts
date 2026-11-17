@@ -44,6 +44,7 @@ export type MenuState = {
   undoReopensClosedTab?: boolean;
   downloadsInProgress?: number;
   extensions?: { id: string; title: string; icon?: string | null; enabled: boolean }[];
+  plugins?: { id: string; title: string; icon: string }[];
   shortcuts?: Record<string, string[][]>;
 };
 

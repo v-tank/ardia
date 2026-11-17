@@ -1,7 +1,14 @@
 import type { PluginManifest } from "../../lib/pluginManifest";
 import { PLATFORM_TERMS } from "../../lib/platformTerms";
+import { parseConfigShortcut } from "../config/configShortcuts";
+import { formatShortcut } from "../commands/shortcuts";
 
 export type ConsentLine = { icon: string; text: string };
+
+function toolbarKey(shortcut: string | null): string {
+  const parsed = shortcut ? parseConfigShortcut(shortcut) : null;
+  return parsed ? ` (${formatShortcut(parsed)})` : "";
+}
 
 export function consentLines(m: PluginManifest): ConsentLine[] {
   const lines: ConsentLine[] = [];
@@ -21,6 +28,7 @@ export function consentLines(m: PluginManifest): ConsentLine[] {
   if (m.page) lines.push({ icon: m.page.icon, text: `Adds a page you open as a tab: ${m.page.title} (ardia://${m.name})` });
   if (m.commands.some((c) => "open" in c.action && c.action.context)) lines.push({ icon: "rectangle.split.2x1", text: "Its page can be handed the tab you're on when you open it beside that tab" });
   if (m.commands.length) lines.push({ icon: "command.square", text: `Adds to the command bar: ${m.commands.map((c) => c.title).join(", ")}` });
+  if (m.toolbar) lines.push({ icon: m.toolbar.icon, text: `Adds a toolbar button: ${m.toolbar.title}${toolbarKey(m.toolbar.shortcut)}` });
   if (m.telemetry.counters.length) lines.push({ icon: "chart.bar", text: "Counts how often you use its features (no content)" });
   if (m.tools.length) lines.push({ icon: "wrench.and.screwdriver", text: `Offers tools to the ardia command and other plugins: ${m.tools.map((t) => t.title).join(", ")}` });
   return lines;

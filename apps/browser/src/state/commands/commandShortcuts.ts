@@ -2,7 +2,7 @@ import type { MenuItem } from "../../platform/menus";
 import type { MenuShortcut } from "../../platform/commands";
 import { create } from "zustand";
 import { useBrowser } from "../browser/store";
-import { shortcutSources, UNAVAILABLE_COMMANDS } from "./commandCatalog";
+import { PROFILE_SHORTCUT_COUNT, shortcutSources, UNAVAILABLE_COMMANDS } from "./commandCatalog";
 import { ALTERNATE_MODIFIER } from "./keyNotation";
 import { formatShortcut, resolveShortcuts, type ResolvedShortcuts, type Shortcut, type ShortcutOverrides, type ShortcutSource } from "./shortcuts";
 
@@ -13,8 +13,8 @@ type MenuKey = { key?: string; modifiers?: MenuModifier[] };
 type ShortcutState = { settings: { shortcuts: ShortcutOverrides }; profileOrder: readonly string[] };
 type MenuBar = { listed: ReadonlySet<string>; fixed: readonly ShortcutSource[] };
 
-const useMenuBar = create<{ bar: MenuBar | undefined; revision: number }>()(() => ({ bar: undefined, revision: 0 }));
-let resolvedFor: { overrides: ShortcutOverrides; profiles: readonly string[]; menuBar: MenuBar | undefined; resolved: ResolvedShortcuts } | undefined;
+const useMenuBar = create<{ bar: MenuBar | undefined; plugins: readonly ShortcutSource[]; revision: number }>()(() => ({ bar: undefined, plugins: [], revision: 0 }));
+let resolvedFor: { overrides: ShortcutOverrides; profiles: readonly string[]; menuBar: MenuBar | undefined; plugins: readonly ShortcutSource[]; resolved: ResolvedShortcuts } | undefined;
 
 export function setMenuBarShortcuts(offered: readonly MenuShortcut[]) {
   const items = offered.filter((item) => !UNAVAILABLE_COMMANDS.has(item.id));
@@ -25,16 +25,29 @@ export function setMenuBarShortcuts(offered: readonly MenuShortcut[]) {
   useMenuBar.setState((m) => ({ bar, revision: m.revision + 1 }));
 }
 
+export function setPluginShortcutSources(plugins: readonly ShortcutSource[]) {
+  useMenuBar.setState((m) => ({ plugins, revision: m.revision + 1 }));
+}
+
+const PROFILE_SLOTS = Array.from({ length: PROFILE_SHORTCUT_COUNT }, (_, i) => `slot${i}`);
+
+export function builtInHoldersOf(shortcut: Shortcut, overrides: ShortcutOverrides): string[] {
+  const bar = useMenuBar.getState().bar;
+  const catalog = shortcutSources(PROFILE_SLOTS, Object.keys(overrides));
+  const sources = bar ? [...catalog.filter((source) => bar.listed.has(source.id) || source.id.startsWith("switchProfile:")), ...bar.fixed] : catalog;
+  return resolveShortcuts(sources, overrides).holdersOf(shortcut);
+}
+
 export const menuBarRevision = () => useMenuBar.getState().revision;
 export const useMenuBarRevision = () => useMenuBar((m) => m.revision);
 
 export function resolvedShortcuts({ settings, profileOrder }: ShortcutState): ResolvedShortcuts {
   const overrides = settings.shortcuts;
-  const bar = useMenuBar.getState().bar;
-  if (resolvedFor?.overrides !== overrides || resolvedFor.profiles !== profileOrder || resolvedFor.menuBar !== bar) {
-    const catalog = shortcutSources(profileOrder, Object.keys(overrides));
+  const { bar, plugins } = useMenuBar.getState();
+  if (resolvedFor?.overrides !== overrides || resolvedFor.profiles !== profileOrder || resolvedFor.menuBar !== bar || resolvedFor.plugins !== plugins) {
+    const catalog = [...shortcutSources(profileOrder, Object.keys(overrides)), ...plugins];
     const sources = bar ? [...catalog.filter((source) => bar.listed.has(source.id)), ...bar.fixed] : catalog;
-    resolvedFor = { overrides, profiles: profileOrder, menuBar: bar, resolved: resolveShortcuts(sources, overrides) };
+    resolvedFor = { overrides, profiles: profileOrder, menuBar: bar, plugins, resolved: resolveShortcuts(sources, overrides) };
   }
   return resolvedFor.resolved;
 }

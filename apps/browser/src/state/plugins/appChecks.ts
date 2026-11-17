@@ -2,6 +2,9 @@ import { compareVersions, readManifest, type PluginManifest } from "../../lib/pl
 import { sha256 } from "../../lib/sha256";
 import { PLUGIN_EVENTS } from "../automation/eventNames";
 import { checkedSettings } from "../config/configSettings";
+import { parseConfigShortcut, shortcutCatalog } from "../config/configShortcuts";
+import { builtInHoldersOf } from "../commands/commandShortcuts";
+import { formatShortcut } from "../commands/shortcuts";
 import type { Settings } from "../settings/settings";
 import type { PluginListing } from "./store";
 
@@ -32,8 +35,20 @@ export function appProblems(m: PluginManifest, settings: Settings, appVersion: s
     if (!(PLUGIN_EVENTS as readonly string[]).includes(name)) problems.push(`plugin.json: hooks[${i}]: ${name} isn't an event plugins can receive`);
     else if (!UNTABBED_EVENTS.has(name) && !m.permissions.includes("tabs")) problems.push(`plugin.json: hooks[${i}]: ${name} needs the tabs permission`);
   });
+  problems.push(...shortcutProblems(m, settings));
   if (m.requires && appVersion && compareVersions(appVersion, m.requires) < 0) problems.push(`plugin.json: needs Ardia ${m.requires} or later (this is ${appVersion})`);
   return problems;
+}
+
+function shortcutProblems(m: PluginManifest, settings: Settings): string[] {
+  const given = m.toolbar?.shortcut;
+  if (!given) return [];
+  const shortcut = parseConfigShortcut(given);
+  if (!shortcut) return [`plugin.json: toolbar.shortcut "${given}" isn't a shortcut (try "cmd+shift+e" or "⇧⌘E")`];
+  if (!shortcut.modifiers.includes("command") && !shortcut.modifiers.includes("control")) return [`plugin.json: toolbar.shortcut "${given}" needs cmd or ctrl, so typing never runs it`];
+  const holders = builtInHoldersOf(shortcut, settings.shortcuts);
+  const holder = holders[0] && (shortcutCatalog().get(holders[0])?.title ?? holders[0].replace(/^system:/, ""));
+  return holder ? [`plugin.json: toolbar.shortcut ${formatShortcut(shortcut)} is taken by ${holder}`] : [];
 }
 
 export function listingOf(name: string, text: string | null, readProblem: string | null, settings: Settings, appVersion: string, folderId = ""): PluginListing {

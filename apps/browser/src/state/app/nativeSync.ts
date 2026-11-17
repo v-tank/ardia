@@ -30,6 +30,7 @@ import { noteLittleArdiaAppHandoff } from "../telemetry/littleArdiaEscapes";
 import { notePageFocusReturnRequestAfterMenu } from "../telemetry/pageFocusReturns";
 import { startExtensionsBridge } from "../extensions/bridge";
 import { useExtensions } from "../extensions/actions";
+import { usePlugins } from "../plugins/store";
 import { useReader } from "../reader/reader";
 import { answerQuitAfterSaves, isQuitting, setQuitting } from "./quit";
 import { menuInputsChanged, trackedMenuState, type MenuReads } from "../commands/menuState";
@@ -126,7 +127,7 @@ export function startNativeSync() {
     lastMenu = json;
     lastBookmarkMenus = bookmarkMenus;
     const sent = setMenuStateParts(state, bookmarksChanged);
-    const menuItems = JSON.stringify([state.profiles.map((p) => p.id), (state.extensions ?? []).map((e) => e.id)]);
+    const menuItems = JSON.stringify([state.profiles.map((p) => p.id), (state.extensions ?? []).map((e) => e.id), (state.plugins ?? []).map((p) => p.id)]);
     if (menuItems === lastMenuItems) return void sent;
     lastMenuItems = menuItems;
     void sent.then(menuShortcuts).then((items) => {
@@ -147,6 +148,9 @@ export function startNativeSync() {
   });
   useExtensions.subscribe((e, prev) => {
     if (e.lists !== prev.lists) menuTimer ??= setTimeout(syncMenu, 120);
+  });
+  usePlugins.subscribe((p, prev) => {
+    if (p.listings !== prev.listings || p.records !== prev.records || p.order !== prev.order) menuTimer ??= setTimeout(syncMenu, 120);
   });
   useReader.subscribe(() => {
     menuTimer ??= setTimeout(syncMenu, 120);

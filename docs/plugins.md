@@ -1,7 +1,7 @@
 # Plugins
 
 A plugin is a folder with a `plugin.json` that adds to Ardia without a restart: Ardia settings it sets and rows it adds
-to Settings, command bar entries, a page of its own that opens as a tab at `ardia://<name>`, a long-running helper
+to Settings, command bar entries, a toolbar button with its own shortcut, a page of its own that opens as a tab at `ardia://<name>`, a long-running helper
 program, browser events delivered to that program, and tools the `ardia` command and other plugins can call. Issue
 #2462.
 
@@ -50,6 +50,7 @@ and the `ardia` command's plugin commands still install and list files there.
     { "name": "say-hello", "title": "Say Hello", "icon": "hand.wave", "keywords": ["greet"], "tool": "hello" },
     { "name": "beside", "title": "Open Example Beside This Tab", "open": "split", "context": true, "sideSetting": "side" }
   ],
+  "toolbar": { "title": "Say Hello", "icon": "hand.wave", "command": "say-hello", "shortcut": "cmd+shift+e" },
   "page": { "title": "Example", "icon": "sparkles", "file": "page/index.html" },
   "process": { "run": ["/usr/bin/python3", "helper.py"], "memoryMB": 256 },
   "hooks": ["tab.activated", "tab.navigated"],
@@ -100,6 +101,23 @@ command does one of two things:
   `tabs`. `path` (`/history`, `/chats/new?mode=split`) opens the page there.
 
 A plugin with a `page` also gets "Open `<page title>`" for free.
+
+### toolbar
+
+One button in the window's toolbar, right of the address field (left of the extensions' buttons), with the same size,
+hover and pressed plates as its neighbours. Plugins' buttons sit in the Plugins pane's order. `title` (up to 40
+characters) is its tooltip, `icon` an SF Symbol name, and `command` names one of the plugin's `commands`: pressing the
+button runs it exactly as the command bar would. The toolbar's layout counts the buttons, so the address field and the
+extensions move over for them. With the address field in the sidebar (Settings › Appearance) there's no toolbar, so the
+button shows only in the Plugins menu.
+
+`shortcut` (optional) is written as in `config.json`'s `shortcuts` (`docs/config.md`: `"cmd+shift+e"` or `"⇧⌘E"`) and
+must hold cmd or ctrl. The command gets an item in the menu bar's Plugins menu (shown only while a plugin with a
+`toolbar` is on) under the button's title, carrying the shortcut, so it works whatever has focus and you can rebind it
+in Settings › Keyboard Shortcuts like any other item. A shortcut Ardia already uses (a command's default, one you bound,
+a profile's ⌃1 to ⌃9 or a menu bar item of macOS's own) is a manifest problem: `plugin.json: toolbar.shortcut ⌘E is taken
+by Use Selection for Find`. If two plugins ask for the same free shortcut, the first in the Plugins pane's order gets it.
+The menu item's id is `runPluginCommand:<plugin>/<command>`; the `ardia` command can't run it (`docs/automation.md`).
 
 ### page
 
@@ -184,15 +202,15 @@ because another plugin's name must never be sent; for any other plugin they're d
 | `arrange` | The helper may call `apply`, `group.withPage` and `split.toGroup`: open, move, group and close tabs (needs `tabs`). Consent: "Opens, moves, groups and closes your tabs" |
 | `pages` | The helper may call `browse` and `tab.banner`: read and act on the pages in your tabs through the `ardia browse` layer (needs `tabs`). Consent: "Reads and acts on the pages in your tabs" |
 
-Contributions grant their own reach and are shown too: running a program, adding a page, adding commands, changing
-named Ardia settings, offering tools.
+Contributions grant their own reach and are shown too: running a program, adding a page, adding commands, adding a
+toolbar button and its shortcut, changing named Ardia settings, offering tools.
 
 ## Turning a plugin on
 
 A plugin you install is off. Turning it on in Settings › Plugins shows what it gets, in words built from the
 manifest ("Runs a program in the background: /usr/bin/python3 helper.py", "Sees the address and title of your tabs",
 "Runs Ardia commands", "Connects to the internet", "Reads and writes ~/.claude", "Reads ~/.local/share/claude",
-"Changes these settings: commandBarStart", "Adds a page you open as a tab", …). Turn On approves that exact manifest in that exact folder: Ardia keeps the SHA-256 of the manifest's text and the
+"Changes these settings: commandBarStart", "Adds a page you open as a tab", "Adds a toolbar button: Ask AI (⇧⌘E)", …). Turn On approves that exact manifest in that exact folder: Ardia keeps the SHA-256 of the manifest's text and the
 plugin folder's identity on disk (device and inode, after links) in `plugins.json`.
 
 - **A changed manifest needs a new approval.** If `plugin.json` changes while the plugin is on, the plugin stops (its
@@ -361,14 +379,16 @@ The control socket's protocol 4 adds `plugins`, `plugins.enable` (`{"waiting": t
 
 ## Code
 
-- `lib/pluginManifest.ts`: parsing, migration, checks and the schema (`lib/pluginProcess.ts` for `process` and its `access` grants); `lib/pluginManifest.test.mjs`.
+- `lib/pluginManifest.ts`: parsing, migration, checks and the schema (`lib/pluginProcess.ts` for `process` and its `access` grants, `lib/pluginSurfaces.ts` for `toolbar`); `lib/pluginManifest.test.mjs`, `lib/pluginSurfaces.test.mjs`.
 - `state/plugins/`: the registry (`store.ts`), saved state (`savedState.ts`), turning on and off (`lifecycle.ts`),
   settings defaults (`defaults.ts`), the helper channel (`channel.ts`, `channelMethods.ts`; `arrange.ts` for workspace, apply and groups, `browse.ts` and `browseServer.ts`, `banners.ts`), tools (`tools.ts`),
-  command bar entries (`commands.ts`), page tabs (`pages.ts`, `pageNames.ts`), consent copy (`consent.ts`), socket methods
+  command bar entries (`commands.ts`), the toolbar button, its menu item and shortcut (`surfaces.ts`, checked against
+  Ardia's own shortcuts in `appChecks.ts`; `surfaces.test.mjs`), page tabs (`pages.ts`, `pageNames.ts`), consent copy (`consent.ts`), socket methods
   (`socketMethods.ts`).
 - `platform/plugins.ts` binds `ArdiaPlugins` (`packages/shell/ios/PluginsModule.swift`, `PluginFolder.swift`,
   `PluginProcess.swift`, `PluginCore/PluginSandbox.swift` (tested by `packages/shell/plugin-tests`, run by `swift test` in `packages/shell`), `PluginPageView.swift`, `PluginSchemeHandler.swift`).
-- UI: `components/settings/panes/Plugins.tsx`, `components/plugins/PluginPage.tsx` (rendered by `components/pages/InternalPage.tsx`), `components/plugins/PluginBanner.tsx` (in `TabPane`, under the share bar).
+- The Plugins menu: `MainMenu.swift` builds it from the menu state's `plugins`, each item the `runPluginCommand` command.
+- UI: `components/toolbar/PluginToolbarButtons.tsx` (placed by `Toolbar.tsx`, its width in `trailingButtons.ts`), `components/settings/panes/Plugins.tsx`, `components/plugins/PluginPage.tsx` (rendered by `components/pages/InternalPage.tsx`), `components/plugins/PluginBanner.tsx` (in `TabPane`, under the share bar).
 - The example plugin used by the tests: `tests/fixtures/plugins/example/`.
 
 ## Telemetry
@@ -378,9 +398,11 @@ Counts only, never plugin names, titles, URLs, row values, tool input or output:
 `plugin_commands_run`, `plugin_tool_calls`, `plugin_tool_failures`, `plugin_page_opens`, `plugin_split_opens`,
 `plugin_arrange_calls`, `plugin_arrange_failures` (`apply`, `group.withPage`, `split.toGroup`), `plugin_browse_calls`,
 `plugin_browse_failures`, `plugin_browse_leases` (token server started only for a plugin), `plugin_banners_shown`,
-`plugin_banner_stops`, `plugin_values_set`; the daily settings snapshot's
+`plugin_banner_stops`, `plugin_values_set`, `plugin_toolbar_presses` (a plugin's toolbar button), `plugin_menu_runs`
+(its Plugins menu item or shortcut); the daily settings snapshot's
 `plugins_installed`, `plugins_enabled` and, among those on, how many use each contribution:
 `plugins_with_settings`, `plugins_with_commands`, `plugins_with_page`, `plugins_with_process`,
-`plugins_with_hooks`, `plugins_with_tools`. Dashboard: watch `plugin_process_crashes` against
+`plugins_with_hooks`, `plugins_with_tools`, `plugins_with_toolbar`. Dashboard: watch `plugin_toolbar_presses` and
+`plugin_menu_runs` against `plugins_with_toolbar` for whether the button and shortcut get used, `plugin_process_crashes` against
 `plugin_process_starts`, `plugin_browse_failures` against `plugin_browse_calls`, and `plugin_arrange_failures`
 against `plugin_arrange_calls`.

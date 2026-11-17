@@ -117,6 +117,7 @@ export const AUTOMATION: Readonly<Record<BrowserCommand, AutomationDecision>> = 
   moveTabUp: "run",
   closeTabGroup: "run",
   openProfileMenu: "run",
+  runPluginCommand: "control",
 };
 
 type SpecView = { title?: string; scope?: string; variants?: Readonly<Record<string, unknown>>; toggles?: string; chooses?: string };

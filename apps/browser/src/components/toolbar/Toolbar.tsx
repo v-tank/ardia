@@ -41,6 +41,9 @@ import { noteSiteControls } from "../../state/telemetry/usage";
 import { HistoryButton, ReloadButton } from "./NavButtons";
 import { FIELD_LOAD, TOOLBAR_MOTION } from "./tokens";
 import { useToolbarRow } from "./useToolbarRow";
+import { PluginToolbarButtons } from "./PluginToolbarButtons";
+import { pluginButtonsRight, toolbarTrailingWidth } from "./trailingButtons";
+import { usePluginToolbarButtons } from "../../state/plugins/hooks";
 
 type ToolbarTab = Pick<Tab, "id" | "url" | "title" | "windowId" | "zoom">;
 const toolbarTab = (t: Tab | undefined): ToolbarTab | undefined =>
@@ -89,7 +92,9 @@ export function Toolbar({
   const history = useHistoryAvailability(tabId);
   const row = useToolbarRow();
   const extensionsWidth = useToolbarExtensionsWidth(windowId, Infinity);
-  useEffect(() => setToolbarExtensionsWidth(windowId, extensionsWidth), [windowId, extensionsWidth]);
+  const pluginCount = usePluginToolbarButtons().length;
+  const trailingWidth = toolbarTrailingWidth(extensionsWidth, pluginCount, row.button);
+  useEffect(() => setToolbarExtensionsWidth(windowId, trailingWidth), [windowId, trailingWidth]);
   const dim = useRef(new Animated.Value(focused ? 1 : 0.5)).current;
   const dimmedFor = useRef(focused);
   useEffect(() => {
@@ -107,7 +112,8 @@ export function Toolbar({
     const nav = (center: number | null) => ({ style: place(center), hit });
     return { top, sidebarButton: place(geometry.sidebarButton), back: nav(geometry.back), forward: nav(geometry.forward), reload: nav(geometry.reload) };
   }, [geometry, row]);
-  const right = urlFieldRight(inSplit, extensionsWidth, row) + geometry.trailing;
+  const right = urlFieldRight(inSplit, trailingWidth, row) + geometry.trailing;
+  const trailingStart = (inSplit ? 8 + 2 * row.button : 8) + geometry.trailing;
   const urlStyle = useMemo(() => ({ position: "absolute" as const, left: geometry.urlLeft, right, top: urlFieldOf(row).top }), [geometry.urlLeft, right, row]);
   if (!tab) return <View style={{ height: row.height }} />;
 
@@ -129,7 +135,8 @@ export function Toolbar({
         <HistoryButton place={at.back} tabId={tab.id} windowId={tab.windowId} direction={-1} disabled={!history.back} palette={palette} onFocus={focus} />
         <HistoryButton place={at.forward} tabId={tab.id} windowId={tab.windowId} direction={1} disabled={!history.forward} palette={palette} onFocus={focus} />
         <ReloadButton place={at.reload} tab={tab} loading={isLoading} palette={palette} onFocus={focus} />
-        <ToolbarExtensions tabId={tab.id} windowId={windowId} palette={palette} top={row.center - row.extensionButton / 2} right={(inSplit ? 8 + 2 * row.button : 8) + geometry.trailing} />
+        <ToolbarExtensions tabId={tab.id} windowId={windowId} palette={palette} top={row.center - row.extensionButton / 2} right={trailingStart} />
+        <PluginToolbarButtons windowId={windowId} palette={palette} top={at.top} right={pluginButtonsRight(trailingStart, extensionsWidth)} onFocus={focus} />
         {tab.url ? (
           <ToolbarUrlField tab={tab} palette={palette} windowId={windowId} inSplit={inSplit} loadFill={loadFill} onFocus={focus} style={urlStyle} />
         ) : null}

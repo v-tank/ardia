@@ -54,3 +54,5 @@ export const HISTORY_BUTTON_MOTION = {
   travel: 4,
   pressTravel: 1.5,
 } as const;
+
+export const PLUGIN_BUTTONS = { gap: 2, besideExtensions: 2, alone: 6, extensionsInset: 6 } as const;

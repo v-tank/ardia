@@ -14,5 +14,6 @@ struct MenuStateUpdate: Record {
   @Field var bookmarksShown: Bool = true
   @Field var downloadsInProgress: Int = 0
   @Field var extensions: [MenuExtension] = []
+  @Field var plugins: [MenuPluginCommand] = []
   @Field var shortcuts: [String: [[String]]] = [:]
 }

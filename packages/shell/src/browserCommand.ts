@@ -110,4 +110,5 @@ export type BrowserCommand =
   | "moveTabDown"
   | "moveTabUp"
   | "closeTabGroup"
-  | "openProfileMenu";
+  | "openProfileMenu"
+  | "runPluginCommand";

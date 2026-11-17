@@ -1,5 +1,6 @@
 import { JSON_SCHEMA_DIALECT, schemaJson, type JsonSchema } from "./jsonSchema";
 import { COUNTER_PATTERN, MAX_COUNTERS } from "./pluginTelemetry";
+import { SURFACE_SCHEMAS } from "./pluginSurfaces";
 import { KEY_PATTERN, LIMITS, MANIFEST_VERSION, NAME_PATTERN, PLUGIN_PERMISSIONS, SPLIT_SIDES, SYMBOL_PATTERN, VERSION_PATTERN } from "./pluginManifest";
 
 export const PLUGIN_SCHEMA_FILE = "plugin.schema.json";
@@ -90,6 +91,7 @@ export function pluginSchema(eventNames: readonly string[]): Record<string, unkn
           ["name", "title"],
         ),
       },
+      ...SURFACE_SCHEMAS,
     },
     ["name"],
   );
