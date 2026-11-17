@@ -114,6 +114,14 @@ names the tab and `icon` its command bar entry. The tab's content is one of:
   `http://127.0.0.1:<port>/…`, `http://localhost:<port>/…` or `http://[::1]:<port>/…`. Until it arrives the tab says the
   plugin is starting.
 
+A group whose first tab is a plugin page tab (not in a Split View, not in a nested group), as `group.withPage` and
+`split.toGroup` make, is drawn headed by that page: the group's usual block (fill and border from its color), the
+page tab's own row as the header (its icon and title, the selected look when it's the active tab, a click shows it,
+its menu is the tab's), and the other tabs indented under it. `tab.activity` puts the pulsing dot (`goButton`,
+`period.pulse`) at the right of that row. The page tab isn't listed again among the members, and keeps its place in
+⌘1–9 (`state/plugins/pageGroups.ts`, `state/sidebar/entries.ts`, `components/sidebar/GroupBlock.tsx`). Take the
+page tab out of first place and the group is an ordinary group again.
+
 A page tab can have a path, `ardia://<name>/<path>?<query>` (`ardia://ai/history`, `ardia://ai/chats/42`): each path
 is its own tab, and opening one that's already open in the window goes to it. A file page gets the path and query as
 `ardiaPath`; a served page loads them on its helper's server. When a command hands the page a tab, the page's URL
@@ -272,11 +280,12 @@ Requests from the helper (`{"id", "method", "params"}`):
 | `page.open` `{"path"?, "split"?, "side"?, "context"?}` | a `page`; `context` needs `tabs` | `{"tabId", "windowId"}`: opens the plugin's page at that path in the last focused window, as a tab or in Split View beside the current tab |
 | `tools.call` `{"plugin", "tool", "input"?}` | every permission the other plugin has | the tool's result, or its error; the plugin must be on and running. A plugin can't reach through another plugin's tools to what it wasn't granted itself |
 | `result` `{"call", "result"? , "error"?}` | | `{"ok": true}`: the answer to a call (below) |
-| `workspace` `{"window"?, "profile"?, "usage"?}` | `tabs` | the control socket's `workspace` (`docs/automation.md` › Tabs and groups), the same code: private windows and incognito never appear, Ardia's own pages show without their query. URLs come without their query and fragment unless `fullUrls`; plugin page tabs show as `ardia://<name>/<path>` |
+| `workspace` `{"window"?, "profile"?, "usage"?}` | `tabs` | the control socket's `workspace` (`docs/automation.md` › Tabs and groups), the same code: private windows and incognito never appear, Ardia's own pages show without their query. URLs come without their query and fragment unless `fullUrls`; plugin page tabs show as `ardia://<name>/<path>`. Each tab node also has `favicon`: the page's favicon URL Ardia has for it, http(s) or `data:image/` only (at most 64 KB), else null, and null for plugin pages |
 | `apply` `{"ops"}` | `arrange` | the control socket's `apply`, the same operations, checks and results (URLs minimized as above). It stops before its next operation if the plugin turns off |
 | `group.withPage` `{"tab", "tabs"?}` | `arrange` | `{"group", "tabs"}` (the group's tabs in order). `tab` is one of this plugin's page tabs. In a group: `tabs` move into that group right after it. Not grouped and not in Split View: a new group, the page tab first then `tabs`, named after the page tab's title, icon `symbol:sparkles`. Not grouped but in Split View: `in_split` |
 | `split.toGroup` `{"tab"}` | `arrange` | `{"group", "tabs"}`: the Split View holding this plugin's page tab is taken apart and its panes become a group, the page tab first, named as above. A split already in a group leaves its panes in that group, and that group is the answer. Not in a split: `not_in_split` |
 | `browse` `{"tab", "argv"}` | `pages` | `{"ok": true, "text"}` or `{"ok": false, "error"}`: runs one `ardia browse` command (below) on that tab |
+| `tab.activity` `{"tab", "running"}` | `tabs` | `{"ok": true}`: on one of this plugin's page tabs, shows (or hides) a pulsing dot at the right of its sidebar row, for "working on it". It goes when the plugin stops or the tab closes |
 | `tab.banner` `{"tab", "text"}` | `pages` | `{"ok": true}`: a strip at the top of that tab's page showing `text · Stop` (1 to 80 characters; `null` clears it). One plugin's banner per tab. Stop sends `{"event": "plugin.bannerAction", "data": {"tab"}}` to the helper, subscribed or not, and the strip says "Stopping…" until the helper clears it. Banners go when the plugin stops or the tab closes |
 | `telemetry.count` `{"counter", "n"?}` | the counter in `telemetry.counters` | `{"ok": true, "sent"}`: adds `n` (default 1, at most 1,000 a call) to the counter; `sent` is false for a plugin that isn't Ardia's own |
 | `values.set` `{"key", "value"}` | | `{"ok": true}`: sets one of the plugin's own rows, checked like a change in Settings (a toggle's boolean, a text row's up to 200 characters, one of a choice row's values), then sends `plugin.values` |

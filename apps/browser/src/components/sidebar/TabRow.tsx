@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, TextInput, View, type GestureResponderEvent, type TextStyle } from "react-native";
 import { toggleMute } from "../../state/browser/actions";
 import { hex, layout, useTheme } from "../ui/theme";
@@ -59,10 +59,12 @@ export const TabRow = memo(function TabRow({
   tabId,
   onto = false,
   shift = null,
+  trailing = null,
 }: {
   tabId: string;
   onto?: boolean;
   shift?: Animated.Value | null;
+  trailing?: ReactNode;
 }) {
   const theme = useTheme();
   const tokens = useSidebarTokens();
@@ -169,10 +171,11 @@ export const TabRow = memo(function TabRow({
               reserve="hover"
               hover={closeControl && <Button variant="icon" icon={closeControl.icon} size="s" weight="semibold" onPress={() => pressTabClose(tab.id)} tooltip={closeControl.tooltip} />}
             >
-              {loading || showsUnread ? (
+              {loading || showsUnread || trailing ? (
                 <>
                   {loading && <ActivitySpinner style={{ width: 12, height: 12, marginRight: space.xxs }} />}
                   {showsUnread && <UnreadCount unread={unread} ink={active ? theme.rowSelectedText : theme.textTab} onDrawn={setUnreadDrawn} />}
+                  {trailing}
                 </>
               ) : null}
             </HoverSlot>

@@ -1,5 +1,5 @@
 import type { PluginManifest } from "../../lib/pluginManifest";
-import { minimizedUrl } from "../../lib/urlParts";
+import { minimizedUrl, webUrl } from "../../lib/urlParts";
 import { useBrowser } from "../browser/store";
 import { innermostGroupOf } from "../groups/groups";
 import { splitOf, splitTabIds } from "../splits/splits";
@@ -19,18 +19,27 @@ type Node = TabNode | GroupNode | { type: "folder"; id: string; name: string; it
 
 const has = (m: PluginManifest, permission: PluginManifest["permissions"][number]) => m.permissions.includes(permission);
 
-function shownNode<T extends Node>(node: T): T {
-  if (node.type === "tab") return { ...node, url: minimizedUrl(node.url) };
-  return { ...node, items: node.items.map((item) => shownNode(item as Node)) };
+const MAX_FAVICON = 64 * 1024;
+
+export function faviconOf(tabId: string): string | null {
+  const t = useBrowser.getState().tabs[tabId];
+  const icon = t?.favicon ?? null;
+  if (!icon || icon.length > MAX_FAVICON || pluginPageOf(t?.url)) return null;
+  return webUrl(icon) || icon.startsWith("data:image/") ? icon : null;
+}
+
+function shownNode<T extends Node>(node: T, full: boolean): T {
+  if (node.type === "tab") return { ...node, url: full ? node.url : minimizedUrl(node.url), favicon: faviconOf(node.id) };
+  return { ...node, items: node.items.map((item) => shownNode(item as Node, full)) };
 }
 
 function shownWorkspace(w: Workspace, full: boolean): Workspace {
-  if (full) return w;
+  const shown = (node: Node) => shownNode(node, full);
   return {
     ...w,
     windows: w.windows.map((win) => ({
       ...win,
-      spaces: win.spaces.map((sp) => ({ ...sp, topApps: sp.topApps.map(shownNode), pinned: sp.pinned.map(shownNode), tabs: sp.tabs.map(shownNode) })),
+      spaces: win.spaces.map((sp) => ({ ...sp, topApps: sp.topApps.map(shown), pinned: sp.pinned.map(shown), tabs: sp.tabs.map(shown) })) as Workspace["windows"][number]["spaces"],
     })),
   };
 }

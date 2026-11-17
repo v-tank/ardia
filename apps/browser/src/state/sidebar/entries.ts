@@ -8,6 +8,7 @@ import { splitRowPanes, splitTabIds, splitTabIdsOf } from "../splits/splits";
 import { groupIndex, splitIndex, stableList } from "../browser/structure";
 import { tileCells } from "../pins/tileFolders";
 import { entryKey, parseEntry } from "./entryKey";
+import { pageHeadOf } from "../plugins/pageGroups";
 
 type SidebarEntries = { tiles: string[]; cells: string[]; pinned: string[]; list: string[] };
 
@@ -97,7 +98,11 @@ export function numberedTabs(s: BrowserState, windowId: string): string[] {
   };
   const rowTab = (entry: string): string[] => {
     const { kind, id } = parseEntry(entry);
-    if (kind === "group") return s.groups[id]?.collapsed ? collapsedGroup(id) : groupEntries(s, id).flatMap(rowTab);
+    if (kind === "group") {
+      const head = pageHeadOf(s, id);
+      if (head && s.groups[id]?.collapsed) return [head, ...(profileId ? keptEntries(s, windowId, profileId, id) : []).flatMap(rowTab)];
+      return s.groups[id]?.collapsed ? collapsedGroup(id) : [...(head ? [head] : []), ...groupEntries(s, id).flatMap(rowTab)];
+    }
     if (kind !== "split") return [id];
     const panes = splitRowPanes(s, s.splits[id]);
     if (active && panes.includes(active)) return [active];
@@ -174,7 +179,8 @@ export function groupEntries(s: BrowserState, groupId: string): string[] {
   const splits = splitIndex(s.splits);
   const childOf = new Map<string, string>();
   for (const c of childGroups(s.groups, groupId)) for (const id of c.tabIds) childOf.set(id, c.id);
-  const seen = new Set<string>();
+  const head = pageHeadOf(s, groupId);
+  const seen = new Set<string>(head ? [entryKey("tab", head)] : []);
   const out: string[] = [];
   for (const id of g.tabIds) {
     const child = childOf.get(id);

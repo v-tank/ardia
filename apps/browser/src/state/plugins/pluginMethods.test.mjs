@@ -82,7 +82,12 @@ test("workspace is the socket's tree, with URLs minimized and the plugin's page 
   const run = await enabled();
   const { w } = windowWith(["https://a.example/read?secret=1#x"]);
   const page = openPluginPage(w, "example", { path: "/chats/42?draft=1" });
+  const web = S().windows[w].tabIds.find((id) => S().tabs[id].url.startsWith("https://a.example"));
+  S().updateTab(web, { favicon: "https://a.example/favicon.ico" });
   const reply = await ask("workspace", { window: w }, run);
+  assert.equal(reply.result.windows[0].spaces.flatMap((sp) => sp.tabs).find((n) => n.id === web).favicon, "https://a.example/favicon.ico");
+  S().updateTab(web, { favicon: "chrome://favicon/x" });
+  assert.equal((await ask("workspace", { window: w }, run)).result.windows[0].spaces.flatMap((sp) => sp.tabs).find((n) => n.id === web).favicon, null);
   const nodes = reply.result.windows[0].spaces.flatMap((sp) => sp.tabs);
   assert.ok(nodes.some((n) => n.url === "https://a.example/read"), "a web tab without its query");
   assert.ok(nodes.some((n) => n.id === page && n.url === "ardia://example/chats/42"), "its own page tab at its path");
@@ -236,4 +241,32 @@ test("telemetry.count adds to a declared counter, sent only for a first-party pl
   const counts = takePluginCounts();
   assert.equal(counts.plugin_ai_chats_started, 1002);
   assert.equal(takePluginCounts().plugin_ai_chats_started, undefined, "taken once");
+});
+
+test("a group headed by a plugin page: the page tab is the header row, members below it, and tab.activity drives its dot", async () => {
+  const { groupEntries, numberedTabs } = await import("../sidebar/entries.ts");
+  const { rowSpan } = await import("../sidebar/geometry.ts");
+  const { pageHeadOf, usePageActivity } = await import("./pageGroups.ts");
+  const run = await enabled();
+  const { w, tabs } = windowWith(["https://a.example/", "https://b.example/"]);
+  const page = openPluginPage(w, "example", { path: "/chats/3" });
+  const made = await ask("group.withPage", { tab: page, tabs }, run);
+  const group = made.result.group;
+  assert.equal(pageHeadOf(S(), group), page);
+  assert.deepEqual(groupEntries(S(), group), tabs.map((id) => `t:${id}`), "the page tab isn't a member row");
+  const numbered = numberedTabs(S(), w);
+  assert.deepEqual(numbered.slice(numbered.indexOf(page), numbered.indexOf(page) + 3), [page, ...tabs], "it still counts for ⌘1–9, first");
+  const profile = S().windows[w].profileId;
+  assert.ok(rowSpan(S(), w, profile, page, false), "the header row has a place in the sidebar");
+  assert.deepEqual((await ask("tab.activity", { tab: page, running: true }, run)).result, { ok: true });
+  assert.equal(usePageActivity.getState().running[page], "example");
+  assert.equal((await ask("tab.activity", { tab: tabs[0], running: true }, run)).error.code, "refused");
+  assert.equal((await ask("tab.activity", { tab: page, running: "yes" }, run)).error.code, "bad_request");
+  await ask("tab.activity", { tab: page, running: false }, run);
+  assert.equal(usePageActivity.getState().running[page], undefined);
+  await ask("tab.activity", { tab: page, running: true }, run);
+  lifecycle.disablePlugin("example");
+  assert.deepEqual(usePageActivity.getState().running, {}, "a stopped plugin's activity goes");
+  S().ungroup(group);
+  assert.equal(pageHeadOf(S(), group), null);
 });

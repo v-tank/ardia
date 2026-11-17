@@ -25,7 +25,9 @@ import { pressGroupClose, useGroupCloseControlWhile } from "../../state/sidebar/
 import { openGroupMenu } from "../../state/sidebar/menus";
 import { registerRow, useSidebarUi } from "../../state/sidebar/sidebarUi";
 import { FolderOrIcon } from "./AnimatedFolder";
-import { RenameField, SplitRowItem, TabRowItem } from "./TabRow";
+import { RenameField, SplitRowItem, TabRow, TabRowItem } from "./TabRow";
+import { ActivityDot } from "./ActivityDot";
+import { usePageHead } from "../../state/plugins/hooks";
 import { groupBoxAtRest, groupSurface, SIDEBAR_TYPE, TAB_ROW, TABULAR_NUMS, useSidebarTokens } from "./tokens";
 import { SidebarRowSurface } from "./SidebarRow";
 import { entryKey, parseEntry } from "../../state/sidebar/entryKey";
@@ -96,6 +98,7 @@ export const GroupBlock = memo(function GroupBlock({
   const boxOpacity = useHoverFade(nested.innermost || dropInto || groupBoxAtRest(color));
 
   const { fill, stroke } = groupSurface(color, tokens);
+  const pageHead = usePageHead(groupId);
 
   return (
     <Animated.View ref={wrapper.ref} style={wrapper.style}>
@@ -105,7 +108,11 @@ export const GroupBlock = memo(function GroupBlock({
           style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: GROUP_RADIUS, backgroundColor: fill, borderWidth: GROUP_BORDER, borderColor: stroke, opacity: boxOpacity }}
         />
         <View ref={headerRef} {...handle}>
-          <GroupHeader groupId={groupId} windowId={windowId} collapsed={collapsed} open={fold.open} />
+          {pageHead ? (
+            <TabRow tabId={pageHead} onto={dropInto} trailing={<ActivityDot tabId={pageHead} />} />
+          ) : (
+            <GroupHeader groupId={groupId} windowId={windowId} collapsed={collapsed} open={fold.open} />
+          )}
         </View>
         <InnerGroupHover.Provider value={nested.reportInside}>
           <Fold

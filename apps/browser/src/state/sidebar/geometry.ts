@@ -5,6 +5,7 @@ import { ancestorIds } from "../groups/groups";
 import { groupOf } from "../pins/tabGrouping";
 import { splitOf } from "../splits/splits";
 import { groupEntries, holdsTab, keptEntries, sidebarEntries } from "./entries";
+import { pageHeadOf } from "../plugins/pageGroups";
 import { shownPinnedEntries } from "./pinnedFold";
 import { entryId, entryKey } from "./entryKey";
 import { pinSection } from "../browser/model";
@@ -71,6 +72,7 @@ export function rowSpan(
         if (id === null) return top;
         const members = groupEntries(s, id);
         const header = top + GROUP_BORDER;
+        if (pageHeadOf(s, id) === tabId) return header;
         if (!s.groups[id]!.collapsed) return within(members, header + SIDEBAR_ROW.height + headGap(members[0]));
         const kept = keptEntries(s, windowId, profileId, id);
         return within(kept, header + SIDEBAR_ROW.height + headGap(kept[0])) ?? header;

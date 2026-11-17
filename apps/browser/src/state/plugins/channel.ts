@@ -18,6 +18,7 @@ import { isLoopbackPageUrl } from "./pageUrls";
 import { valuesFor } from "./values";
 import { answerPluginMethod } from "./channelMethods";
 import { startBanners } from "./banners";
+import { startPageActivity } from "./pageGroups";
 
 export const CHANNEL_PROTOCOL = 1;
 
@@ -189,6 +190,7 @@ export function startChannels() {
   });
   onPluginExit(processExited);
   startBanners();
+  startPageActivity();
   onProcessStopped(dropConnections);
   onProcessStopped(dropCalls);
   setFeedConsumer("plugins", { subscriptions: () => [...connections.values()].flatMap((c) => (c.sub ? [c.sub] : [])), deliver });

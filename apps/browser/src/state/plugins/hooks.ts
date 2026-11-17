@@ -2,6 +2,8 @@ import { useShallow } from "zustand/react/shallow";
 import { activeManifest, needsReview, recordOf, usePlugins, type PluginsStore } from "./store";
 import { pageViewUrl, usePluginPages } from "./pages";
 import { valuesOf } from "./values";
+import { useBrowser } from "../browser/store";
+import { pageHeadOf } from "./pageGroups";
 
 export const usePluginOrder = () => usePlugins((s) => s.order);
 export const usePluginListing = (name: string) => usePlugins((s) => s.listings[name]);
@@ -16,3 +18,6 @@ export const usePluginPageUrl = (name: string, context: Parameters<typeof pageVi
 export const usePluginNetwork = (name: string) => usePlugins((s) => !!activeManifest(s, name)?.permissions.includes("network"));
 export const usePluginPageSpec = (name: string) => usePlugins((s) => s.listings[name]?.manifest?.page ?? null);
 export { usePluginBanner } from "./banners";
+export { usePageRunning } from "./pageGroups";
+export const usePageHead = (groupId: string) => useBrowser((s) => pageHeadOf(s, groupId));
+export { usePluginToolbarButtons } from "./surfaces";

@@ -5,6 +5,7 @@ import { MAX_COUNT_STEP } from "../../lib/pluginTelemetry";
 import { notePlugin, notePluginCounter } from "../telemetry/pluginCounts";
 import { groupWithPage, pluginApply, pluginWorkspace, splitToGroup } from "./arrange";
 import { setBanner } from "./banners";
+import { setTabActivity } from "./pageGroups";
 import { pluginBrowse } from "./browse";
 import { setPluginValue } from "./lifecycle";
 
@@ -37,6 +38,8 @@ export function answerPluginMethod(name: string, m: PluginManifest, method: stri
       return pluginBrowse(name, m, params);
     case "tab.banner":
       return setBanner(name, m, params);
+    case "tab.activity":
+      return setTabActivity(name, m, params);
     case "values.set":
       return setValue(name, params);
     case "telemetry.count":
