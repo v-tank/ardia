@@ -322,3 +322,21 @@ test("a plugin can't set settings that need their own approval", async () => {
   assert.equal(P().listings.example.manifest, null);
   assert.ok(P().listings.example.problems.some((p) => p.includes("launchActions needs its own approval")));
 });
+
+test("pages take a path: each path is its own tab, and a helper opens them with page.open", async () => {
+  const run = await enabled();
+  const w = S().createWindow({ url: "https://a.example/" });
+  const history = openPluginPage(w, "example", { path: "/history" });
+  const chat = openPluginPage(w, "example", { path: "/chats/42?draft=1" });
+  assert.notEqual(history, chat);
+  assert.equal(S().tabs[chat].url, "ardia://example/chats/42?draft=1");
+  assert.ok(isInternalTab(S().tabs[chat]));
+  assert.equal(openPluginPage(w, "example", { path: "/history" }), history, "the same path goes back to its tab");
+  assert.equal(openPluginPage(w, "example", { path: "/../x" }), null);
+  assert.match(pageViewUrl(P(), "example", null, "/chats/42?draft=1"), /\?ardiaPath=%2Fchats%2F42%3Fdraft%3D1$/);
+  const opened = await ask("page.open", { path: "/chats/7", split: true, side: "left" }, run);
+  assert.ok(opened.result.tabId);
+  assert.equal(S().tabs[opened.result.tabId].url, "ardia://example/chats/7");
+  assert.equal((await ask("page.open", { path: "nope path" }, run)).error.code, "bad_request");
+  lifecycle.disablePlugin("example");
+});

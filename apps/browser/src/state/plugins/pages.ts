@@ -6,22 +6,32 @@ import { useBrowser } from "../browser/store";
 import { activeTabId, viewTabIds } from "../browser/model";
 import { openSplitPane } from "../splits/actions";
 import { notePlugin } from "../telemetry/pluginCounts";
-import { pluginPageOf, pluginPageUrl } from "./pageNames";
+import { isPagePath, pluginPageOf, pluginPagePath, pluginPageUrl } from "./pageNames";
 import { activeManifest, currentPlugins, type PluginsStore } from "./store";
 
-export { pluginPageOf, pluginPageUrl };
+export { isPagePath, pluginPageOf, pluginPagePath, pluginPageUrl };
 
 export type PageContext = { tabId: string; url: string; title: string };
 
 export const usePluginPages = create<{ contexts: Record<string, PageContext> }>()(() => ({ contexts: {} }));
 
 
-export function pageViewUrl(s: Pick<PluginsStore, "listings" | "records" | "servedUrls">, name: string, context: PageContext | null): string | null {
+const withParam = (url: string, key: string, value: string) => `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
+
+function servedAt(served: string, path: string): string {
+  if (!path) return served;
+  const origin = /^http:\/\/[^/?#]+/.exec(served)?.[0] ?? served;
+  return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function pageViewUrl(s: Pick<PluginsStore, "listings" | "records" | "servedUrls">, name: string, context: PageContext | null, path = ""): string | null {
   const page = activeManifest(s, name)?.page;
-  if (!page) return null;
-  const base = "file" in page.source ? `ardia-plugin://${name}/${page.source.file.split("/").map(encodeURIComponent).join("/")}` : (s.servedUrls[name] ?? null);
-  if (!base || !context) return base;
-  return `${base}${base.includes("?") ? "&" : "?"}ardiaContext=${encodeURIComponent(JSON.stringify(context))}`;
+  if (!page || !isPagePath(path)) return null;
+  const file = "file" in page.source ? `ardia-plugin://${name}/${page.source.file.split("/").map(encodeURIComponent).join("/")}` : null;
+  const served = file ? null : (s.servedUrls[name] ?? null);
+  let url = file ? (path ? withParam(file, "ardiaPath", path) : file) : served ? servedAt(served, path) : null;
+  if (url && context) url = withParam(url, "ardiaContext", JSON.stringify(context));
+  return url;
 }
 
 function contextOf(name: string, tabId: string | null): PageContext | null {
@@ -31,13 +41,18 @@ function contextOf(name: string, tabId: string | null): PageContext | null {
   return { tabId: tab.id, url: m.permissions.includes("fullUrls") ? tab.url : minimizedUrl(tab.url), title: tab.customTitle || tab.title };
 }
 
-export function openPluginPage(windowId: string, name: string, how: { split?: boolean; side?: PageSide; context?: boolean } = {}): string | null {
+export function openPluginPage(windowId: string, name: string, how: { split?: boolean; side?: PageSide; context?: boolean; path?: string } = {}): string | null {
   if (!activeManifest(currentPlugins(), name)?.page) return null;
+  const path = how.path ?? "";
+  if (!isPagePath(path)) return null;
   const s = useBrowser.getState();
   if (!s.windows[windowId]) return null;
-  const url = pluginPageUrl(name);
+  const url = pluginPageUrl(name, path);
   const anchor = activeTabId(s, windowId);
-  const existing = viewTabIds(s, windowId).find((id) => pluginPageOf(s.tabs[id]?.url) === name) ?? null;
+  const existing = viewTabIds(s, windowId).find((id) => {
+    const at = s.tabs[id]?.url ?? "";
+    return pluginPageOf(at) === name && pluginPagePath(at) === path;
+  }) ?? null;
   const context = how.context ? contextOf(name, anchor ?? null) : null;
   let tabId: string | null;
   if (how.split && anchor && anchor !== existing) {

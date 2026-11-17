@@ -5,7 +5,9 @@ import { minimizedUrl } from "../../lib/urlParts";
 import type { PluginManifest } from "../../lib/pluginManifest";
 import { useBrowser } from "../browser/store";
 import { failure, parseRequest, parseSubscription, type RequestId, type Subscription } from "../automation/automationMethods";
-import { automationWindows } from "../automation/automationWindows";
+import { automationWindows, lastFocusedEligibleWindow } from "../automation/automationWindows";
+import { SPLIT_SIDES, type PageSide } from "../../lib/pluginManifest";
+import { isPagePath, openPluginPage } from "./pages";
 import { eventTargets, refreshFeed, runMethod, setFeedConsumer, type Body } from "../automation/controlSocket";
 import { launchToReplay } from "../automation/lifecycleEvents";
 import type { AutomationEventName } from "../automation/eventNames";
@@ -63,6 +65,18 @@ function servePage(name: string, m: PluginManifest, params: Record<string, unkno
   return { result: { ok: true } };
 }
 
+function openPage(name: string, m: PluginManifest, params: Record<string, unknown>): Body {
+  if (!m.page) return failure("refused", "This plugin has no page.");
+  const { path, split, side, context } = params;
+  if (path !== undefined && (typeof path !== "string" || !isPagePath(path))) return failure("bad_request", "page.open's path is /like/this?q=1, at most 512 characters.");
+  if (side !== undefined && !(SPLIT_SIDES as readonly unknown[]).includes(side)) return failure("bad_request", "side is left, right, top or bottom.");
+  if (context === true && !has(m, "tabs")) return failure("refused", "Handing the page a tab needs the tabs permission.");
+  const windowId = lastFocusedEligibleWindow(useBrowser.getState());
+  if (!windowId) return failure("no_window", "No window to open the page in.");
+  const tabId = openPluginPage(windowId, name, { path: (path as string | undefined) ?? "", split: split === true, side: side as PageSide | undefined, context: context === true });
+  return tabId ? { result: { tabId, windowId } } : failure("failed", "The page couldn't open.");
+}
+
 async function toolsCall(name: string, m: PluginManifest, params: Record<string, unknown>): Promise<Body> {
   const { plugin, tool, input } = params;
   if (typeof plugin !== "string" || typeof tool !== "string") return failure("bad_request", "tools.call needs a plugin and a tool.");
@@ -87,6 +101,8 @@ function answer(c: Connection, m: PluginManifest, method: string, params: Record
       return has(m, "commands") ? runMethod(params) : failure("refused", "run needs the commands permission.");
     case "page.serve":
       return servePage(c.name, m, params);
+    case "page.open":
+      return openPage(c.name, m, params);
     case "tools.call":
       return toolsCall(c.name, m, params);
     case "result": {

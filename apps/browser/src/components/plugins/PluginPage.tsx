@@ -3,7 +3,7 @@ import { Box, Button, PluginPageView, Text } from "../ui";
 import { useTheme } from "../ui/theme";
 import { useTab } from "../../state/browser/hooks";
 import { usePluginActive, usePluginNetwork, usePluginPageContext, usePluginPageSpec, usePluginPageUrl, usePluginProcess } from "../../state/plugins/hooks";
-import { openPageLink } from "../../state/plugins/actions";
+import { openPageLink, pluginPagePath } from "../../state/plugins/actions";
 import { openSettings } from "../../state/settings/settingsWindows";
 
 function Notice({ title, detail, name }: { title: string; detail: string; name: string }) {
@@ -21,10 +21,11 @@ function Notice({ title, detail, name }: { title: string; detail: string; name: 
 export function PluginPage({ tabId, name }: { tabId: string; name: string }) {
   const theme = useTheme();
   const windowId = useTab(tabId, (t) => t?.windowId ?? "");
+  const path = useTab(tabId, (t) => pluginPagePath(t?.url ?? ""));
   const spec = usePluginPageSpec(name);
   const active = usePluginActive(name);
   const context = usePluginPageContext(tabId);
-  const url = usePluginPageUrl(name, context);
+  const url = usePluginPageUrl(name, context, path);
   const process = usePluginProcess(name);
   const network = usePluginNetwork(name);
   if (!spec || !active) return <Notice name={name} title={`${spec?.title ?? name} is off`} detail="Turn the plugin on in Settings › Plugins to use its page." />;

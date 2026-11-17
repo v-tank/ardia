@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		2FF0A6F31D6FB76878E63C5F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3E0CAE61008516DE07A12694 /* PrivacyInfo.xcprivacy */; };
 		32CC817DBABC4088BF1F2895 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 42108ADD054F481A9B60EC2B /* AppIcon.icon */; };
-		A7D3C0DE00000000000000D1 /* AppIcon-Dev.icon in Resources */ = {isa = PBXBuildFile; fileRef = A7D3C0DE00000000000000D2 /* AppIcon-Dev.icon */; };
 		3FF132665BBAFDDFE46449C0 /* DisableFusebox.mm in Sources */ = {isa = PBXBuildFile; fileRef = E9A15241E979C9B4F4BB79D8 /* DisableFusebox.mm */; };
 		514201522437B4B40078DB4F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 514201512437B4B40078DB4F /* Assets.xcassets */; };
 		6AFA04B3BADCFAB2D5E0529A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B616A5F60952076D0F8358 /* AppDelegate.swift */; };
@@ -17,19 +16,20 @@
 		8BCF4D4113B3117AB0BC70B7 /* libPods-Ardia-macOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C1D4F94ED9B4A4D62FC468D0 /* libPods-Ardia-macOS.a */; };
 		8F617A53519DD1FCC02CBCA4 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE21821D6B4527B7E023B602 /* main.swift */; };
 		9C21C633DCE93A2C521A0862 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BFBFB605DF6F35370DCDEB9 /* ExpoModulesProvider.swift */; };
+		A7D3C0DE00000000000000D1 /* AppIcon-Dev.icon in Resources */ = {isa = PBXBuildFile; fileRef = A7D3C0DE00000000000000D2 /* AppIcon-Dev.icon */; };
 		EB6C4E3A222E6D1BF85AB612 /* Ardia.sdef in Resources */ = {isa = PBXBuildFile; fileRef = 4F6F34DACD396890604E4F3F /* Ardia.sdef */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		3E0CAE61008516DE07A12694 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = ../PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		42108ADD054F481A9B60EC2B /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
-		A7D3C0DE00000000000000D2 /* AppIcon-Dev.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "AppIcon-Dev.icon"; sourceTree = "<group>"; };
 		4F6F34DACD396890604E4F3F /* Ardia.sdef */ = {isa = PBXFileReference; includeInIndex = 1; path = Ardia.sdef; sourceTree = "<group>"; };
 		514201492437B4B30078DB4F /* Ardia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ardia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		514201512437B4B40078DB4F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		514201562437B4B40078DB4F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		514201592437B4B40078DB4F /* Ardia.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ardia.entitlements; sourceTree = "<group>"; };
 		6BFBFB605DF6F35370DCDEB9 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Ardia-macOS/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		A7D3C0DE00000000000000D2 /* AppIcon-Dev.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "AppIcon-Dev.icon"; sourceTree = "<group>"; };
 		B061BE5464342E57C82A2F6C /* Pods-Ardia-macOS.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Ardia-macOS.debug.xcconfig"; path = "Target Support Files/Pods-Ardia-macOS/Pods-Ardia-macOS.debug.xcconfig"; sourceTree = "<group>"; };
 		B5B616A5F60952076D0F8358 /* AppDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C1D4F94ED9B4A4D62FC468D0 /* libPods-Ardia-macOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Ardia-macOS.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -397,7 +397,7 @@
 				INFOPLIST_FILE = "Ardia-macOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.47-nightly.5;
+				MARKETING_VERSION = "0.2.47-nightly.5";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -432,7 +432,7 @@
 				INFOPLIST_FILE = "Ardia-macOS/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.47-nightly.5;
+				MARKETING_VERSION = "0.2.47-nightly.5";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

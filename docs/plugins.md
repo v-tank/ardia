@@ -114,8 +114,11 @@ names the tab and `icon` its command bar entry. The tab's content is one of:
   `http://127.0.0.1:<port>/…`, `http://localhost:<port>/…` or `http://[::1]:<port>/…`. Until it arrives the tab says the
   plugin is starting.
 
-When a command hands the page a tab, the page's URL carries it as `ardiaContext`, a JSON object `{"tabId", "url",
-"title"}`. While the plugin is off, changed or not running, the tab stays and says so, with a way to Settings; it is
+A page tab can have a path, `ardia://<name>/<path>?<query>` (`ardia://ai/history`, `ardia://ai/chats/42`): each path
+is its own tab, and opening one that's already open in the window goes to it. A file page gets the path and query as
+`ardiaPath`; a served page loads them on its helper's server. When a command hands the page a tab, the page's URL
+carries it as `ardiaContext`, a JSON object `{"tabId", "url", "title"}`. Navigation inside the page doesn't change the
+tab's address, title or back and forward yet (follow-up issue). While the plugin is off, changed or not running, the tab stays and says so, with a way to Settings; it is
 never sent to Chrome. A plugin with a page can't take the name of one of Ardia's or Chrome's own pages (`history`,
 `settings`, `flags`, `extensions`, … `lib/pluginNames.ts`).
 
@@ -228,6 +231,7 @@ Requests from the helper (`{"id", "method", "params"}`):
 | `windows` | `tabs` | as on the socket |
 | `run` `{"command", "arg"?, "window"?, "tab"?}` | `commands` | as on the socket |
 | `page.serve` `{"url"}` | `page.served` | `{"ok": true}`; open page tabs load it |
+| `page.open` `{"path"?, "split"?, "side"?, "context"?}` | a `page`; `context` needs `tabs` | `{"tabId", "windowId"}`: opens the plugin's page at that path in the last focused window, as a tab or in Split View beside the current tab |
 | `tools.call` `{"plugin", "tool", "input"?}` | every permission the other plugin has | the tool's result, or its error; the plugin must be on and running. A plugin can't reach through another plugin's tools to what it wasn't granted itself |
 | `result` `{"call", "result"? , "error"?}` | | `{"ok": true}`: the answer to a call (below) |
 

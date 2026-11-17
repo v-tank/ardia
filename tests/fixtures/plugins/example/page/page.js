@@ -6,3 +6,5 @@ const given = new URLSearchParams(location.search).get("ardiaContext");
 const context = given ? JSON.parse(given) : null;
 document.getElementById("context").textContent = context ? "Beside: " + context.title + " (" + context.url + ")" : "Opened on its own";
 document.title = "Example ready";
+const path = new URLSearchParams(location.search).get("ardiaPath");
+if (path) document.querySelector("h1").textContent = "Example page at " + path;
