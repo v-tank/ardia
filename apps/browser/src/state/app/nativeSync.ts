@@ -29,6 +29,7 @@ import { startExtensionsBridge } from "../extensions/bridge";
 import { useExtensions } from "../extensions/actions";
 import { useReader } from "../reader/reader";
 import { answerQuitAfterSaves, isQuitting, setQuitting } from "./quit";
+import { isTestInstance } from "../../platform/launchConfig";
 import { menuInputsChanged, trackedMenuState, type MenuReads } from "../commands/menuState";
 import { usePages } from "../tabs/pageState";
 import { openFromWindowlessPage } from "../tabs/openFromWindowlessPage";
@@ -85,7 +86,12 @@ export function startNativeSync() {
       finishAnimatedCloses();
       flushPersistence({ final: true });
       flushLive();
-      void answerQuitAfterSaves(QUIT_SAVES_WAIT_MS, () => replyToTerminate(true));
+      const quitAsked = Date.now();
+      if (isTestInstance()) console.info("[ardia windows] test: willQuit arrived");
+      void answerQuitAfterSaves(QUIT_SAVES_WAIT_MS, () => {
+        if (isTestInstance()) console.info(`[ardia windows] test: willQuit answered after ${Date.now() - quitAsked} ms`);
+        return replyToTerminate(true);
+      });
     }
     if (e.type === "quitCancelled") {
       setQuitting(false);

@@ -33,6 +33,7 @@ import { startTabLifecycle } from "./state/tabs/tabLifecycle";
 import { startTabPages } from "./state/tabs/tabPages";
 import { startTabReveal } from "./state/tabs/tabReveal";
 import { startSync } from "./state/sync/engine";
+import { stageProfileForTest } from "./state/import/stageProfileForTest";
 import { startSharedFolders } from "./state/sharedFolders/engine";
 import { setStoreBatching, useBrowser } from "./state/browser/store";
 import { installErrorReporting, startTelemetry } from "./state/telemetry";
@@ -69,6 +70,7 @@ startOpenWhenDone();
 afterFirstWindow(startUserScripts);
 afterFirstWindow(startAutomation);
 afterFirstWindow(startSharedFolders);
+afterFirstWindow(stageProfileForTest);
 startMemoryTrim();
 if (__DEV__ || perfProbeEnabled) require("./components/dev/devHarness").startDevHarness();
 
