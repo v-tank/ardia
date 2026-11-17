@@ -240,6 +240,21 @@
         ]
       }
     },
+    "telemetry": {
+      "type": "object",
+      "properties": {
+        "counters": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,39}$"
+          },
+          "description": "Usage counters the helper adds to with telemetry.count"
+        }
+      },
+      "additionalProperties": false
+    },
     "tools": {
       "type": "array",
       "maxItems": 32,

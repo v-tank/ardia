@@ -1,4 +1,5 @@
 import { JSON_SCHEMA_DIALECT, schemaJson, type JsonSchema } from "./jsonSchema";
+import { COUNTER_PATTERN, MAX_COUNTERS } from "./pluginTelemetry";
 import { KEY_PATTERN, LIMITS, MANIFEST_VERSION, NAME_PATTERN, PLUGIN_PERMISSIONS, SPLIT_SIDES, SYMBOL_PATTERN, VERSION_PATTERN } from "./pluginManifest";
 
 export const PLUGIN_SCHEMA_FILE = "plugin.schema.json";
@@ -77,6 +78,10 @@ export function pluginSchema(eventNames: readonly string[]): Record<string, unkn
         ["run"],
       ),
       hooks: { type: "array", maxItems: 64, items: { enum: [...eventNames] } },
+      telemetry: closed(
+        { counters: { type: "array", maxItems: MAX_COUNTERS, items: { type: "string", pattern: COUNTER_PATTERN }, description: "Usage counters the helper adds to with telemetry.count" } },
+        [],
+      ),
       tools: {
         type: "array",
         maxItems: LIMITS.tools,

@@ -2,6 +2,7 @@ import { isFields, type Fields } from "./decode";
 import { upgraded, type Migrations } from "./savedDocument";
 import { isPagePath, RESERVED_PAGE_NAMES } from "./pluginNames";
 import { isPluginPath, processOf, PROCESS_LIMITS, type ProcessSpec } from "./pluginProcess";
+import { telemetryOf, type TelemetrySpec } from "./pluginTelemetry";
 
 export { isPluginPath, type AccessGrant, type ProcessSpec } from "./pluginProcess";
 
@@ -69,6 +70,7 @@ export type PluginManifest = {
   process: ProcessSpec | null;
   hooks: string[];
   tools: ToolSpec[];
+  telemetry: TelemetrySpec;
 };
 
 export type ManifestRead = { manifest: PluginManifest | null; problems: string[]; newer: boolean };
@@ -269,7 +271,7 @@ function permissionsOf(c: Check, value: unknown): PluginPermission[] {
   return out;
 }
 
-const TOP_KEYS = ["$schema", "manifest", "name", "title", "description", "version", "requires", "permissions", "settings", "commands", "page", "process", "hooks", "tools"];
+const TOP_KEYS = ["$schema", "manifest", "name", "title", "description", "version", "requires", "permissions", "settings", "commands", "page", "process", "hooks", "tools", "telemetry"];
 
 export function checkManifest(raw: Fields): { manifest: PluginManifest | null; problems: string[] } {
   const c: Check = { problems: [] };
@@ -287,6 +289,7 @@ export function checkManifest(raw: Fields): { manifest: PluginManifest | null; p
   unique(c, "commands", commands.map((x) => x.name), "commands");
   const page = pageOf(c, raw.page);
   const process = processOf(c.problems, raw.process);
+  const telemetry = telemetryOf(c.problems, raw.telemetry);
   const hooks = list(c, "hooks", raw.hooks, 64).flatMap((h, i) => (typeof h === "string" && h ? [h] : (c.problems.push(`${at("hooks", i)} must be an event name`), [])));
   commands.forEach((x, i) => {
     const action = x.action;
@@ -310,7 +313,7 @@ export function checkManifest(raw: Fields): { manifest: PluginManifest | null; p
   for (const [what, used] of needsProcess) if (used && !process) c.problems.push(`${what} needs a process`);
   if (c.problems.length || !name || !title) return { manifest: null, problems: c.problems };
   return {
-    manifest: { manifest: MANIFEST_VERSION, name, title, description, version, requires, permissions, settings, commands, page, process, hooks, tools },
+    manifest: { manifest: MANIFEST_VERSION, name, title, description, version, requires, permissions, settings, commands, page, process, hooks, tools, telemetry },
     problems: [],
   };
 }

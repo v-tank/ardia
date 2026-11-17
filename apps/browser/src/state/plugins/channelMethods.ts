@@ -1,7 +1,8 @@
 import type { PluginManifest } from "../../lib/pluginManifest";
 import { failure } from "../automation/automationMethods";
 import type { Body } from "../automation/controlSocket";
-import { notePlugin } from "../telemetry/pluginCounts";
+import { MAX_COUNT_STEP } from "../../lib/pluginTelemetry";
+import { notePlugin, notePluginCounter } from "../telemetry/pluginCounts";
 import { groupWithPage, pluginApply, pluginWorkspace, splitToGroup } from "./arrange";
 import { setBanner } from "./banners";
 import { pluginBrowse } from "./browse";
@@ -13,6 +14,13 @@ function setValue(name: string, params: Record<string, unknown>): Body {
   if (problem) return failure("bad_request", problem);
   notePlugin("plugin_values_set");
   return { result: { ok: true } };
+}
+
+function count(name: string, m: PluginManifest, params: Record<string, unknown>): Body {
+  const { counter, n = 1 } = params;
+  if (typeof counter !== "string" || !m.telemetry.counters.includes(counter)) return failure("refused", "counter must be one of the counters this plugin's manifest lists under telemetry.");
+  if (typeof n !== "number" || !Number.isInteger(n) || n < 1) return failure("bad_request", "n is a whole number of 1 or more.");
+  return { result: { ok: true, sent: notePluginCounter(name, counter, Math.min(n, MAX_COUNT_STEP)) } };
 }
 
 export function answerPluginMethod(name: string, m: PluginManifest, method: string, params: Record<string, unknown>): Body | Promise<Body> | null {
@@ -31,6 +39,8 @@ export function answerPluginMethod(name: string, m: PluginManifest, method: stri
       return setBanner(name, m, params);
     case "values.set":
       return setValue(name, params);
+    case "telemetry.count":
+      return count(name, m, params);
   }
   return null;
 }

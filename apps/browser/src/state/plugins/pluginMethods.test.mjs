@@ -210,3 +210,30 @@ test("values.set checks the value against its row and tells the helper, as a cha
   }
   assert.equal(takePluginCounts().plugin_values_set, 1);
 });
+
+test("telemetry.count adds to a declared counter, sent only for a first-party plugin", async () => {
+  const { readManifest } = await import("../../lib/pluginManifest.ts");
+  const bad = readManifest(JSON.stringify({ ...FIXTURE, telemetry: { counters: ["Chats", "ok", "ok"], extra: 1 } })).problems;
+  assert.ok(bad.some((p) => p.includes("telemetry.counters[0]")));
+  assert.ok(bad.some((p) => p.includes("names ok twice")));
+  assert.ok(bad.some((p) => p.includes("telemetry.extra isn't a key")));
+  const withCounters = (name) => ({ ...FIXTURE, name, permissions: ["tabs"], hooks: [], telemetry: { counters: ["chats_started", "tool_read"] } });
+  assert.ok(consentLines(readManifest(JSON.stringify(withCounters("example"))).manifest).some((l) => l.text === "Counts how often you use its features (no content)"));
+  const run = await enabled();
+  host.folders = [{ name: "example", status: "ok", text: JSON.stringify(withCounters("example")) }];
+  await lifecycle.rescanPlugins();
+  assert.ok(lifecycle.requestPluginConsent("example") && lifecycle.enablePlugin("example", P().consent.hash));
+  await settle();
+  const third = P().processes.example.run;
+  assert.deepEqual((await ask("telemetry.count", { counter: "chats_started" }, third)).result, { ok: true, sent: false });
+  assert.equal((await ask("telemetry.count", { counter: "secret_thing" }, third)).error.code, "refused");
+  assert.equal((await ask("telemetry.count", { counter: "tool_read", n: 0 }, third)).error.code, "bad_request");
+  assert.ok(!Object.keys(takePluginCounts()).some((k) => k.includes("example")), "a third-party plugin's name is never sent");
+  assert.ok(run > 0);
+  const { notePluginCounter } = await import("../telemetry/pluginCounts.ts");
+  assert.equal(notePluginCounter("ai", "chats_started", 2), true);
+  assert.equal(notePluginCounter("ai", "chats_started", 1000), true);
+  const counts = takePluginCounts();
+  assert.equal(counts.plugin_ai_chats_started, 1002);
+  assert.equal(takePluginCounts().plugin_ai_chats_started, undefined, "taken once");
+});

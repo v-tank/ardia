@@ -21,6 +21,7 @@ export function consentLines(m: PluginManifest): ConsentLine[] {
   if (m.page) lines.push({ icon: m.page.icon, text: `Adds a page you open as a tab: ${m.page.title} (ardia://${m.name})` });
   if (m.commands.some((c) => "open" in c.action && c.action.context)) lines.push({ icon: "rectangle.split.2x1", text: "Its page can be handed the tab you're on when you open it beside that tab" });
   if (m.commands.length) lines.push({ icon: "command.square", text: `Adds to the command bar: ${m.commands.map((c) => c.title).join(", ")}` });
+  if (m.telemetry.counters.length) lines.push({ icon: "chart.bar", text: "Counts how often you use its features (no content)" });
   if (m.tools.length) lines.push({ icon: "wrench.and.screwdriver", text: `Offers tools to the ardia command and other plugins: ${m.tools.map((t) => t.title).join(", ")}` });
   return lines;
 }

@@ -156,6 +156,15 @@ At most 32. A tool is an action the helper performs on request: `name` (like a c
 command (`ardia plugins call`), and other plugins' helpers (`tools.call`). Input and result are JSON, at most 1 MB.
 Needs a `process`.
 
+### telemetry
+
+`"telemetry": {"counters": ["chats_started", "tool_read"]}` names up to 32 usage counters (each a lowercase letter, then
+up to 39 lowercase letters, digits and `_`) the helper adds to with `telemetry.count`. The consent sheet says "Counts how
+often you use its features (no content)". Counts go out with the hourly `usage_counts`, only while sharing is on, as
+`plugin_<name>_<counter>`, and only for Ardia's own plugins (`FIRST_PARTY_PLUGINS` in `lib/pluginTelemetry.ts`: `ai`),
+because another plugin's name must never be sent; for any other plugin they're dropped and `telemetry.count` answers
+`{"ok": true, "sent": false}`. The AI plugin's counters are named in the What's Sent copy (`state/telemetry/copy.ts`).
+
 ### permissions
 
 | Permission | What it allows |
@@ -269,6 +278,7 @@ Requests from the helper (`{"id", "method", "params"}`):
 | `split.toGroup` `{"tab"}` | `arrange` | `{"group", "tabs"}`: the Split View holding this plugin's page tab is taken apart and its panes become a group, the page tab first, named as above. A split already in a group leaves its panes in that group, and that group is the answer. Not in a split: `not_in_split` |
 | `browse` `{"tab", "argv"}` | `pages` | `{"ok": true, "text"}` or `{"ok": false, "error"}`: runs one `ardia browse` command (below) on that tab |
 | `tab.banner` `{"tab", "text"}` | `pages` | `{"ok": true}`: a strip at the top of that tab's page showing `text · Stop` (1 to 80 characters; `null` clears it). One plugin's banner per tab. Stop sends `{"event": "plugin.bannerAction", "data": {"tab"}}` to the helper, subscribed or not, and the strip says "Stopping…" until the helper clears it. Banners go when the plugin stops or the tab closes |
+| `telemetry.count` `{"counter", "n"?}` | the counter in `telemetry.counters` | `{"ok": true, "sent"}`: adds `n` (default 1, at most 1,000 a call) to the counter; `sent` is false for a plugin that isn't Ardia's own |
 | `values.set` `{"key", "value"}` | | `{"ok": true}`: sets one of the plugin's own rows, checked like a change in Settings (a toggle's boolean, a text row's up to 200 characters, one of a choice row's values), then sends `plugin.values` |
 
 A method the manifest doesn't allow is `refused`. Events from Ardia: `plugin.values` (`{"values"}`) when you change a

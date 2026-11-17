@@ -1,4 +1,5 @@
 import { contributionsOf, CONTRIBUTIONS, type PluginManifest } from "../../lib/pluginManifest";
+import { isFirstPartyPlugin } from "../../lib/pluginTelemetry";
 import { activeManifest, usePlugins } from "../plugins/store";
 
 const NONE = {
@@ -24,12 +25,21 @@ const NONE = {
 export type PluginCount = keyof typeof NONE;
 
 let counts = { ...NONE };
+let ownCounters: Record<string, number> = {};
 
 export const notePlugin = (what: PluginCount) => void counts[what]++;
 
-export function takePluginCounts() {
-  const taken = counts;
+export function notePluginCounter(plugin: string, counter: string, n: number): boolean {
+  if (!isFirstPartyPlugin(plugin)) return false;
+  const key = `plugin_${plugin}_${counter}`;
+  ownCounters[key] = (ownCounters[key] ?? 0) + n;
+  return true;
+}
+
+export function takePluginCounts(): typeof NONE & Record<string, number> {
+  const taken = { ...ownCounters, ...counts };
   counts = { ...NONE };
+  ownCounters = {};
   return taken;
 }
 
