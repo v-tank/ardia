@@ -8,6 +8,7 @@ final class ConfigWatcher {
     var folder: String?
     var exact: Set<String> = []
     var streamed: [String] = []
+    var prefixes: [String] = []
     var topology = ""
   }
 
@@ -72,6 +73,15 @@ final class ConfigWatcher {
         next.exact.insert(real)
         streamed.insert((real as NSString).deletingLastPathComponent)
       }
+    }
+    let plugins = (folder as NSString).appendingPathComponent("plugins")
+    next.exact.insert(plugins)
+    next.prefixes = [plugins + "/"]
+    if let real = Self.resolved(plugins) {
+      next.exact.insert(real)
+      next.prefixes.append(real + "/")
+      streamed.insert(real)
+      streamed.insert((real as NSString).deletingLastPathComponent)
     }
     let sorted = streamed.sorted()
     next.streamed = sorted.filter { path in !sorted.contains { $0 != path && path.hasPrefix($0 + "/") } }
@@ -140,7 +150,9 @@ final class ConfigWatcher {
   private func streamChanged(_ paths: [String], rootChanged: Bool) {
     let before = rebuild()
     let relevant = before.exact.union(targets.exact)
-    if rootChanged || before.folder != targets.folder || paths.contains(where: relevant.contains) { notify() }
+    let prefixes = before.prefixes + targets.prefixes
+    let inPlugins = paths.contains { path in prefixes.contains { path.hasPrefix($0) } }
+    if rootChanged || before.folder != targets.folder || inPlugins || paths.contains(where: relevant.contains) { notify() }
   }
 
   private func notify() {

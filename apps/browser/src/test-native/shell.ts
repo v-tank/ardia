@@ -413,6 +413,38 @@ const systemSignalsModule: Modules["ArdiaSystemSignals"] = {
   addListener: systemSignalEvents.addListener,
 };
 
+export const pluginHost = {
+  folders: [] as { name: string; status: "ok" | "missing" | "notFile" | "tooBig" | "unreadable"; text?: string }[],
+  starts: [] as { name: string; run: string[]; memoryMB: number; network: boolean }[],
+  stops: [] as { name: string; run: number; graceMs: number }[],
+  replies: [] as { name: string; run: number; line: string }[],
+  events: [] as { name: string; run: number; line: string }[],
+  removed: [] as string[],
+  startResult: null as null | { ok: false; reason: string },
+  nextRun: 0,
+};
+const pluginEvents = nativeEvents();
+export const emitPluginLine = (line: { name: string; run: number; line: string }) => pluginEvents.emit("onLine", line);
+export const emitPluginExit = (exit: { name: string; run: number; status: number | null; signal: number | null; overMemory: boolean }) => pluginEvents.emit("onExit", exit);
+const plugins: Modules["ArdiaPlugins"] = {
+  folder: () => "/config/plugins",
+  list: async () => pluginHost.folders.map((f) => ({ ...f })),
+  start: async (spec) => {
+    pluginHost.starts.push({ ...spec, run: [...spec.run] });
+    if (pluginHost.startResult) return pluginHost.startResult;
+    return { ok: true, run: ++pluginHost.nextRun, pid: 1000 + pluginHost.nextRun };
+  },
+  stop: async (name, run, graceMs) => void pluginHost.stops.push({ name, run, graceMs }),
+  reply: (name, run, line) => void pluginHost.replies.push({ name, run, line }),
+  event: (name, run, line) => void pluginHost.events.push({ name, run, line }),
+  call: (name, run, line) => void pluginHost.events.push({ name, run, line }),
+  remove: async (name) => (pluginHost.removed.push(name), (pluginHost.folders = pluginHost.folders.filter((f) => f.name !== name)), { ok: true }),
+  revealLog: () => {},
+  revealFolder: () => {},
+  devSnapshotPage: async () => false,
+  addListener: pluginEvents.addListener,
+};
+
 export const shellNativeModules: Modules = {
   ArdiaShell: shell,
   ArdiaAppWindows: windowsModule,
@@ -439,6 +471,7 @@ export const shellNativeModules: Modules = {
   ArdiaUserScripts: userScripts,
   ArdiaConfig: config,
   ArdiaAutomation: automation,
+  ArdiaPlugins: plugins,
   ArdiaSystemSignals: systemSignalsModule,
   ArdiaTelemetryLocal: telemetryLocalModule,
   ArdiaReport: reportModule,

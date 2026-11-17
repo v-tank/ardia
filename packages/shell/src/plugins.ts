@@ -1,0 +1,40 @@
+import type { EventSubscription } from "expo-modules-core";
+import type { ViewProps } from "react-native";
+
+export type PluginFolderEntry = {
+  name: string;
+  status: "ok" | "missing" | "notFile" | "tooBig" | "unreadable";
+  text?: string;
+};
+
+export type PluginStartSpec = { name: string; run: string[]; memoryMB: number; network: boolean };
+export type PluginStartResult = { ok: true; run: number; pid: number } | { ok: false; reason: string };
+export type PluginExit = { name: string; run: number; status: number | null; signal: number | null; overMemory: boolean };
+export type PluginLine = { name: string; run: number; line: string };
+export type PluginRemoveResult = { ok: true } | { ok: false; reason: string };
+
+export type PluginsNative = {
+  folder(): string;
+  list(): Promise<PluginFolderEntry[]>;
+  start(spec: PluginStartSpec): Promise<PluginStartResult>;
+  stop(name: string, run: number, graceMs: number): Promise<void>;
+  reply(name: string, run: number, line: string): void;
+  event(name: string, run: number, line: string): void;
+  call(name: string, run: number, line: string): void;
+  remove(name: string): Promise<PluginRemoveResult>;
+  revealLog(name: string): void;
+  revealFolder(): void;
+  devSnapshotPage(name: string, path: string): Promise<boolean>;
+  addListener(name: "onLine", listener: (e: PluginLine) => void): EventSubscription;
+  addListener(name: "onExit", listener: (e: PluginExit) => void): EventSubscription;
+};
+
+export type PluginPageEvent<T> = { nativeEvent: T };
+
+export type PluginPageProps = ViewProps & {
+  plugin: string;
+  url: string;
+  network: boolean;
+  onOpenUrl?: (e: PluginPageEvent<{ url: string }>) => void;
+  onLoaded?: (e: PluginPageEvent<{ url: string; title: string }>) => void;
+};

@@ -1,6 +1,7 @@
 import { requireNativeViewManager } from "expo-modules-core";
 import type { ViewProps } from "react-native";
 import { nativeModule } from "./nativeModules";
+import type { PluginPageProps } from "./plugins";
 
 export type WindowProfileSwapped = { selection?: string; switchId?: number; profileLoaded?: boolean; activeMs?: number; swapMs?: number; heldTimedOut?: boolean };
 export type WindowProfileProps = ViewProps & {
@@ -202,3 +203,5 @@ export type DockSelectionProps = ViewProps & {
 };
 
 export const DockSelection = requireNativeViewManager<DockSelectionProps>("ArdiaDockSelection");
+
+export const PluginPageView = requireNativeViewManager<PluginPageProps>("ArdiaPlugins");

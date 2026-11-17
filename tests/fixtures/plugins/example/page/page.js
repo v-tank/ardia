@@ -1,0 +1,8 @@
+document.getElementById("where").textContent = "Served from " + location.origin;
+const visits = Number(localStorage.getItem("visits") || "0") + 1;
+localStorage.setItem("visits", String(visits));
+document.getElementById("storage").textContent = "Opened " + visits + (visits === 1 ? " time" : " times") + "; cookies here: " + (document.cookie || "none");
+const given = new URLSearchParams(location.search).get("ardiaContext");
+const context = given ? JSON.parse(given) : null;
+document.getElementById("context").textContent = context ? "Beside: " + context.title + " (" + context.url + ")" : "Opened on its own";
+document.title = "Example ready";
