@@ -54,7 +54,7 @@ function HealthPage() {
       <Panel
         source="app"
         title={<span className="inline-flex items-center gap-1.5">CLI <SourcePill source="cli" /></span>}
-        description="ardia CLI commands and exceptions from opted-in installs, by CLI version. A command fails when it exits non-zero. Click a command for who hit the failures."
+        description="ardia CLI commands and exceptions from opted-in installs, by CLI version. A command fails when it exits non-zero. Rust is the share served by the native binary without Python, and its median time. Click a command for who hit the failures."
       >
         <Loaded query={cli} skeleton={<TableSkeleton rows={5} columns={6} />}>
           {(c) => <CliHealth c={c} />}
@@ -241,6 +241,13 @@ function CliHealth({ c }: { c: Cli }) {
           { key: "failed", header: "Failed", align: "right", sort: (r) => r.failRate ?? -1, cell: (r) => (r.failed ? <span className="font-medium text-bad">{formatExact(r.failed)} · {formatPercent(r.failRate)}</span> : <span className="text-muted-foreground">0</span>) },
           { key: "exceptions", header: "Exceptions", align: "right", sort: (r) => r.exceptions, cell: (r) => (r.exceptions ? <span className="font-medium text-bad">{formatExact(r.exceptions)}</span> : <span className="text-muted-foreground">0</span>) },
           { key: "p50", header: "p50 / p95", align: "right", sort: (r) => r.p50, cell: (r) => <span className="whitespace-nowrap text-muted-foreground">{Math.round(r.p50)} / {Math.round(r.p95)} ms</span> },
+          {
+            key: "rust",
+            header: "Rust",
+            align: "right",
+            sort: (r) => r.rustShare ?? -1,
+            cell: (r) => (r.rust ? <span className="whitespace-nowrap text-muted-foreground">{formatPercent(r.rustShare)} · p50 {Math.round(r.rustP50 ?? 0)} ms</span> : <span className="text-muted-foreground">0</span>),
+          },
         ]}
       />
       <DataTable

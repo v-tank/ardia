@@ -1,0 +1,80 @@
+name: CLI
+
+on:
+  pull_request:
+    paths:
+      - "apps/cli/**"
+      - ".github/workflows/cli.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/cli/**"
+      - ".github/workflows/cli.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cli-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.vouch.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: .github
+      - id: vouch
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        with:
+          retries: 3
+          script: |
+            const vouch = require(`${process.env.GITHUB_WORKSPACE}/.github/vouch/vouch.cjs`);
+            await vouch.gate({ github, context, core });
+
+  rust:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    name: Rust ardia on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04]
+    defaults:
+      run:
+        working-directory: apps/cli/rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Rust
+        run: |
+          command -v rustup >/dev/null || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+      - run: cargo build --locked --release
+      - name: Size
+        run: echo "ardia binary: $(wc -c < target/release/ardia) bytes" >> "$GITHUB_STEP_SUMMARY"
+      - name: uv
+        run: curl -LsSf https://astral.sh/uv/0.12.15/install.sh | sh
+      - name: Parity with the Python CLI
+        working-directory: apps/cli
+        env:
+          ARDIA_RUST_CLI: ${{ github.workspace }}/apps/cli/rust/target/release/ardia
+        run: |
+          ~/.local/bin/uv venv --python 3.13 "$RUNNER_TEMP/venv"
+          VIRTUAL_ENV="$RUNNER_TEMP/venv" ~/.local/bin/uv pip install --quiet --require-hashes --no-build -r requirements.lock
+          "$RUNNER_TEMP/venv/bin/python" -m unittest -v tests.test_rust_parity

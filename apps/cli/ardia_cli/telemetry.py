@@ -364,6 +364,7 @@ def command_record(call: Call, status: int, crashed: bool, distinct_id: str, env
         **timings(call),
         "cli_version": __version__,
         "$environment": environment,
+        "served_by": "python",
     })
 
 

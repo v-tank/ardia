@@ -1,5 +1,6 @@
 #!/bin/sh
-# Builds the ardia CLI tarball: a relocatable CPython 3.13 with ardia_cli, its pinned dependencies, esbuild and axe-core.
+# Builds the ardia CLI tarball: the Rust ardia binary (apps/cli/rust) as bin/ardia, and the relocatable CPython 3.13 with
+# ardia_cli, its pinned dependencies, esbuild and axe-core that it hands every command it doesn't serve itself.
 #
 #   apps/cli/scripts/build.sh <version> <out dir> [--platform macos-arm64|linux-x64]
 #   apps/cli/scripts/build.sh -h | --help
@@ -7,7 +8,8 @@
 # Writes <out dir>/ardia-cli-<version>-<platform>.tar.gz and its .sha256 (sha256sum format). The platform defaults to
 # the host's (macos-arm64 on Apple silicon, linux-x64 on Linux x86_64) and must be the host's: the bundled Python
 # installs the wheels and runs the checks. Needs the network (python-build-standalone from GitHub, wheels from PyPI,
-# esbuild and axe-core from npm) and uv (~/.local/bin/uv or on PATH). The Python, esbuild and axe-core downloads are pinned by
+# esbuild and axe-core from npm, crates from crates.io), uv (~/.local/bin/uv or on PATH) and cargo (~/.cargo/bin/cargo
+# or on PATH; the crate's Cargo.lock pins its dependencies). The Python, esbuild and axe-core downloads are pinned by
 # sha256 (the npm ones also by npm's sha512 integrity) and cached in ~/Library/Caches/ardia-cli-build on macOS and
 # ${XDG_CACHE_HOME:-~/.cache}/ardia-cli-build on Linux. requirements.lock carries the hashes for both platforms.
 set -eu
@@ -89,6 +91,9 @@ cli_dir=$(cd "$(dirname "$0")/.." && pwd)
 uv=$(command -v uv 2>/dev/null || true)
 [ -n "$uv" ] || uv=$HOME/.local/bin/uv
 [ -x "$uv" ] || { echo "build.sh: uv not found" >&2; exit 1; }
+cargo=$(command -v cargo 2>/dev/null || true)
+[ -n "$cargo" ] || cargo=$HOME/.cargo/bin/cargo
+[ -x "$cargo" ] || { echo "build.sh: cargo not found (install Rust with rustup)" >&2; exit 1; }
 
 mkdir -p "$cache" "$out"
 out=$(cd "$out" && pwd)
@@ -159,22 +164,12 @@ find "$root" -type l | while IFS= read -r link; do
 done
 "$python" -I -c 'import ardia_cli.cli, ardia_cli.computer, ardia_cli.browse.cli, ardia_cli.browse.daemon, ardia_cli.scripts_cli, ardia_cli.scripts_test, ardia_cli.scripts_store, ardia_cli.browsing, ardia_cli.wsclient, websockets.asyncio.server, sqlite3, ssl, zoneinfo, ctypes, lzma; from ardia_cli.userscript import find_esbuild; assert find_esbuild().endswith("ardia_cli/bin/esbuild"); from ardia_cli.browse.audit import axe_source; assert "axe" in axe_source()[:4000]' >/dev/null
 
-cat >"$root/bin/ardia" <<'EOF'
-#!/bin/sh
-self=$0
-while [ -L "$self" ]; do
-  link=$(readlink "$self")
-  case $link in
-    /*) self=$link ;;
-    *) self=$(dirname "$self")/$link ;;
-  esac
-done
-root=$(cd -P "$(dirname "$self")/.." && pwd -P)
-exec "$root/python/bin/python3" -I -m ardia_cli "$@"
-EOF
+(cd "$cli_dir/rust" && ARDIA_CLI_VERSION=$version CARGO_TARGET_DIR=$work/rust-target "$cargo" build --quiet --release --locked)
+cp "$work/rust-target/release/ardia" "$root/bin/ardia"
 chmod 755 "$root/bin/ardia"
 mkdir "$root/.leases"
-"$root/bin/ardia" --version >/dev/null
+[ "$("$root/bin/ardia" --version)" = "ardia $version" ] || { echo "build.sh: the Rust ardia doesn't run" >&2; exit 1; }
+"$root/bin/ardia" skills list >/dev/null || { echo "build.sh: the Rust ardia can't hand a command to the bundled Python" >&2; exit 1; }
 find "$root" -name __pycache__ -type d -prune -exec rm -rf {} +
 
 tarball=ardia-cli-$version-$platform.tar.gz
