@@ -84,7 +84,7 @@ fn clock_of(text: &str) -> Option<f64> {
     let mut fraction = 0.0;
     for (index, part) in parts.iter_mut().enumerate() {
         if index > 0 {
-            if at >= bytes.len() {
+            if at >= bytes.len() || matches!(bytes[at], b'.' | b',') {
                 break;
             }
             if separated {
@@ -200,5 +200,29 @@ mod tests {
             assert_eq!(parse_iso(text), Iso::Invalid, "{text}");
         }
         assert_eq!(parse_iso("2020-W01-1"), Iso::Unported);
+    }
+
+    #[test]
+    fn takes_a_fraction_after_any_time_part_like_python() {
+        for (text, at) in [
+            ("2020-01-01T08:05.5Z", 1_577_865_900.5),
+            ("2020-01-01T08.5Z", 1_577_865_600.5),
+            ("2020-01-01T0805.5Z", 1_577_865_900.5),
+            ("2020-01-01T08:05:06,1234567Z", 1_577_865_906.123_456),
+            ("2020-01-01T08:05+05.5", 1_577_847_899.5),
+            ("2020-01-01T08:05:06+05:30:15.5", 1_577_846_090.5),
+        ] {
+            assert_eq!(parse_iso(text), Iso::At(at), "{text}");
+        }
+        for text in [
+            "2020-01-01T08:5Z",
+            "2020-01-01T08:0506",
+            "2020-01-01T0805:06",
+            "2020-01-01T08:05:06.",
+            "2020-01-01T08:05:06.5x",
+            "2020-01-01T",
+        ] {
+            assert_eq!(parse_iso(text), Iso::Invalid, "{text}");
+        }
     }
 }

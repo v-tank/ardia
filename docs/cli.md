@@ -202,19 +202,23 @@ a reply whose shape Python would print differently or crash on (a tree that isn'
 a non-ASCII string inside a list printed with `repr`). For a reply it renders the whole output first and prints
 nothing until it knows it can, then hands over, and Python asks Ardia again: these are read-only calls.
 
-Ported alongside, for the commands that come next: endpoint discovery (`endpoint.rs`, `endpoint.py`'s order and
-checks, `/json/version` over a direct HTTP request), the control socket client (`control.rs`: the path length and
-owner checks, a non-blocking connect with its 5 s limit, the peer uid through `LOCAL_PEERCRED` or `SO_PEERCRED`,
+What the native commands need is ported with them: the data dir (`endpoint.rs`: `--data-dir`, `$ARDIA_DATA_DIR`,
+else the installed app's), the control socket client (`control.rs`: the path length and owner checks, a non-blocking connect with its 5 s limit, the peer uid through `LOCAL_PEERCRED` or `SO_PEERCRED`,
 `hello` with the caller, one JSON line per request, the 1 MB line limit, the 30 s call limit and every error message),
 the caller name (`caller.rs`: libproc and `KERN_PROCARGS2` on macOS, `/proc` on Linux, Info.plist in XML or binary
 form), Python's JSON (`json.rs`: `json.loads`'s grammar including `NaN`, ordered keys, lone surrogates, and
 `json.dumps`'s separators, `ensure_ascii` and `repr` floats), the terminal output guard (`printable.rs`) and the
-telemetry and usage writers (`telemetry.rs`, `usage.rs`). The CDP client stays in Python until a ported command needs
-it. Ctrl-C prints `ardia <command>: interrupted` and exits 130, as Python does.
+telemetry and usage writers (`telemetry.rs`, `usage.rs`). Endpoint resolution (`--ws`, `--port`,
+`ArdiaControl.json`) and the CDP client stay in Python until a ported command needs them. Ctrl-C prints `ardia
+<command>: interrupted` and exits 130, as Python does; a SIGINT the caller ignores stays ignored, in the command and
+in what it hands to Python.
 
 A command it serves records the same `cli_command` event Python would (same command, subcommand, flags, exit code and
 error code, `startup_ms` from the process start, `total_ms`), in the same local copy and queue, with `served_by:
-"rust"`; Python's events carry `served_by: "python"`, so a command handed over still counts once, as Python's. When
+"rust"`; Python's events carry `served_by: "python"`, so a command handed over still counts once, as Python's. It
+reads `telemetry.json`'s `sharingUntil` as Python 3.13's `datetime.fromisoformat` does, except ISO week dates
+(`2026-W47-1`); an expiry it can't read counts as passed, so the event stays local where Python would sometimes queue
+it, never the other way. When
 a flush is due it starts the same detached `python -I` flusher Python starts. It writes `usage.json`'s recent commands
 as Python does. Dashboard: Health › CLI shows, per CLI version, the share of commands Rust served and their median
 time; watch that share grow as commands move over and `served_by: rust` rows among the failures.

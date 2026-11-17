@@ -82,7 +82,7 @@ pub struct Target {
 }
 
 fn lowered(name: &str) -> String {
-    env(name).unwrap_or_default().trim().to_lowercase()
+    env(name).unwrap_or_default().trim_matches(crate::py::is_space).to_lowercase()
 }
 
 pub fn opted_out() -> bool {
@@ -187,8 +187,7 @@ fn epoch_seconds(value: &Value) -> Option<f64> {
         Value::Float(number) => Some(if *number > 1e11 { number / 1000.0 } else { *number }),
         Value::Str(text) => match clock::parse_iso(text) {
             clock::Iso::At(seconds) => Some(seconds),
-            clock::Iso::Invalid => None,
-            clock::Iso::Unported => Some(f64::NEG_INFINITY),
+            clock::Iso::Invalid | clock::Iso::Unported => Some(f64::NEG_INFINITY),
         },
         _ => None,
     }
@@ -576,7 +575,6 @@ fn spawn_flusher(python: &Path, target: &Target) {
                 }
             }
             libc::signal(libc::SIGPIPE, libc::SIG_DFL);
-            libc::signal(libc::SIGINT, libc::SIG_DFL);
             Ok(())
         });
     }

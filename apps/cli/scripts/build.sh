@@ -169,7 +169,7 @@ cp "$work/rust-target/release/ardia" "$root/bin/ardia"
 chmod 755 "$root/bin/ardia"
 mkdir "$root/.leases"
 [ "$("$root/bin/ardia" --version)" = "ardia $version" ] || { echo "build.sh: the Rust ardia doesn't run" >&2; exit 1; }
-"$root/bin/ardia" skills list >/dev/null || { echo "build.sh: the Rust ardia can't hand a command to the bundled Python" >&2; exit 1; }
+ARDIA_CLI_HOME="$work/cli-home" ARDIA_TELEMETRY=off "$root/bin/ardia" skills list >/dev/null || { echo "build.sh: the Rust ardia can't hand a command to the bundled Python" >&2; exit 1; }
 find "$root" -name __pycache__ -type d -prune -exec rm -rf {} +
 
 tarball=ardia-cli-$version-$platform.tar.gz

@@ -2,6 +2,7 @@ import json
 import os
 import select
 import shutil
+import signal
 import site
 import socket
 import subprocess
@@ -257,10 +258,41 @@ class RustParity(unittest.TestCase):
         self.check("windows", replies={"windows": {"error": {"code": 7, "message": ["a", 1.5]}}})
 
     def test_consent_matches(self):
-        for until in ("2020-01-01T00:00:00+0000", "20200101T000000Z", "2999-01-01 10", "2020-02-30T00:00:00Z", "not a date", 1_000, 99_999_999_999_999):
+        for until in ("2020-01-01T00:00:00+0000", "20200101T000000Z", "2999-01-01 10", "2020-01-01T08:05.5Z", "2999-01-01T08.5+05.5", 1_000, 99_999_999_999_999):
             self.check("windows", replies={"windows": {"result": []}}, consent={"sharingUntil": until})
         self.check("windows", replies={"windows": {"result": []}}, consent={"sharing": False})
         self.check("windows", replies={"windows": {"result": []}}, consent={"sessionOpen": True, "sessionId": INSTALL_ID, "watchReport": "FB-AB12"})
+
+    def test_an_expiry_it_cannot_read_keeps_the_event_local(self):
+        for until in ("2999-W01-1", "2020-02-30T00:00:00Z", "not a date"):
+            run, _, data = self.run_side("rust", ["windows"], {"windows": {"result": []}}, {}, b"", True, {"result": {"app": "Ardia"}}, {"sharingUntil": until})
+            records, queued, _ = self.telemetry(data)
+            self.assertEqual(run.returncode, 0, run.stderr)
+            self.assertEqual([(record["distinct_id"], record["sent"]) for record in records], [("local", False)], until)
+            self.assertEqual(queued, [], until)
+            self.case = Path(tempfile.mkdtemp(prefix="c", dir=self.scratch))
+
+    def test_opt_outs_match(self):
+        for name, value in (("ARDIA_TELEMETRY", "off\u001c"), ("ARDIA_TELEMETRY", " No\u001f"), ("DO_NOT_TRACK", "0\u001f"), ("DO_NOT_TRACK", "\u001c")):
+            self.check("windows", replies={"windows": {"result": []}}, extra={name: value})
+
+    def test_an_ignored_interrupt_stays_ignored_after_the_hand_off(self):
+        data = self.case / "data"
+        data.mkdir()
+        fake = FakeArdia(data / "ArdiaControl.sock", {"hello": {"result": {"app": "Ardia"}}, "subscribe": {"result": {}}})
+        try:
+            events = subprocess.Popen([str(self.root / "bin" / "ardia"), "events"], env=self.environment({}), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                      preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN))
+            deadline = time.monotonic() + 20
+            while not any(method == "subscribe" for method, _ in fake.requests) and time.monotonic() < deadline:
+                time.sleep(0.05)
+            events.send_signal(signal.SIGINT)
+            time.sleep(1)
+            self.assertIsNone(events.poll(), events.stderr.read() if events.poll() is not None else "")
+        finally:
+            events.kill()
+            events.communicate()
+            fake.close()
 
     def test_shapes_it_cannot_mirror_go_to_python(self):
         self.check("tabs", replies={"workspace": {"result": 3}}, served="python")
@@ -346,6 +378,15 @@ class RustParity(unittest.TestCase):
         self.assertEqual(len(seen), 1)
         self.assertTrue(seen[0].isdigit())
         self.assertEqual(leftover, [])
+
+
+class BuildSmoke(unittest.TestCase):
+    def test_the_packaging_smoke_runs_leave_no_history_or_telemetry_behind(self):
+        script = (CLI / "scripts" / "build.sh").read_text().splitlines()
+        runs = [line for line in script if '"$root/bin/ardia"' in line and not line.startswith(("cp ", "chmod ")) and "--version" not in line]
+        self.assertTrue(runs)
+        for line in runs:
+            self.assertRegex(line, r'^ARDIA_CLI_HOME="\$work/[^"]+" ARDIA_TELEMETRY=off "\$root/bin/ardia" ', line)
 
 
 class Collector(BaseHTTPRequestHandler):

@@ -164,7 +164,6 @@ fn pass_through(python: Option<&Path>, argv: &[OsString]) -> i32 {
     };
     unsafe {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
-        libc::signal(libc::SIGINT, libc::SIG_DFL);
     }
     let error = std::process::Command::new(python)
         .arg0(python)
