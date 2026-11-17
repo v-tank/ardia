@@ -192,7 +192,7 @@ export function startDevHarness() {
       typeof import("../../state/plugins/pages") &
       typeof import("../../state/plugins/tools") &
       typeof import("../../state/plugins/commands") &
-      typeof import("../../state/plugins/socketMethods") & { snapshotPage: typeof import("../../platform/plugins").devSnapshotPluginPage } {
+      typeof import("../../state/plugins/socketMethods") & { snapshotPage: typeof import("../../platform/plugins").devSnapshotPluginPage; approve: (name: string) => boolean } {
       return {
         ...require("../../state/plugins/store"),
         ...require("../../state/plugins/lifecycle"),
@@ -201,6 +201,12 @@ export function startDevHarness() {
         ...require("../../state/plugins/commands"),
         ...require("../../state/plugins/socketMethods"),
         snapshotPage: require("../../platform/plugins").devSnapshotPluginPage,
+        approve: (name: string) => {
+          if (!require("../../platform/launchConfig").isTestInstance()) return false;
+          const { currentPlugins } = require("../../state/plugins/store");
+          const hash = currentPlugins().listings[name]?.hash;
+          return !!hash && require("../../state/plugins/lifecycle").enablePlugin(name, hash);
+        },
       };
     },
     get airTraffic(): typeof import("../../state/airTraffic/store") & typeof import("../../state/airTraffic/preview") & typeof import("../../state/littleArdia/actions") {

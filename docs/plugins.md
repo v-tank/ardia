@@ -187,6 +187,9 @@ plugin folder's identity on disk (device and inode, after links) in `plugins.jso
   installs a new folder, then swaps it in) is a new folder, so the plugin needs a new approval even with the same
   manifest and even when Ardia wasn't running; a running Ardia is also asked to turn it off first.
 - `ardia plugins enable NAME` opens the same sheet in Ardia; it never turns a plugin on by itself.
+- An end-to-end test turns a plugin on in a test instance (a build not signed for distribution on a scratch `ARDIA_DATA_DIR`, `isTestInstance()`) with the dev
+  harness's `ac.plugins.approve(name)`, which approves the manifest as it is now, as Turn On would. Anywhere else it
+  does nothing and answers false.
 - Turning off: the helper stops, its page tabs say it's off, commands, rows, hooks and tools go, and settings defaults
   go back.
 - Remove (Settings, or `ardia plugins remove`) turns it off, moves the folder to the Trash and deletes its
