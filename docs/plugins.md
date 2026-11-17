@@ -286,7 +286,7 @@ The control socket's protocol 4 adds `plugins`, `plugins.enable` (`{"waiting": t
   command bar entries (`commands.ts`), page tabs (`pages.ts`, `pageNames.ts`), consent copy (`consent.ts`), socket methods
   (`socketMethods.ts`).
 - `platform/plugins.ts` binds `ArdiaPlugins` (`packages/shell/ios/PluginsModule.swift`, `PluginFolder.swift`,
-  `PluginProcess.swift`, `PluginSandbox.swift`, `PluginPageView.swift`, `PluginSchemeHandler.swift`).
+  `PluginProcess.swift`, `PluginCore/PluginSandbox.swift` (tested by `packages/shell/plugin-tests`, run by `swift test` in `packages/shell`), `PluginPageView.swift`, `PluginSchemeHandler.swift`).
 - UI: `components/settings/panes/Plugins.tsx`, `components/plugins/PluginPage.tsx` (rendered by `components/pages/InternalPage.tsx`).
 - The example plugin used by the tests: `tests/fixtures/plugins/example/`.
 
