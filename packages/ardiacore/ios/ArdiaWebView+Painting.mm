@@ -14,7 +14,6 @@ namespace {
 constexpr CFTimeInterval kLeaveScreenDelay = 0.1;
 constexpr CFTimeInterval kFirstFrameHoldSeconds = 0.25;
 constexpr CFTimeInterval kHolderBackstopSeconds = kFirstFrameHoldSeconds + 0.05;
-constexpr CFTimeInterval kLingeringPaneSunkSeconds = 0.5;
 constexpr CFTimeInterval kSwapReportSeconds = 10;
 NSString *const kLingeringPane = @"ardia.lingeringPane";
 }
@@ -145,13 +144,6 @@ NSView *LingeringPaneOver(NSView *view) {
       if ([sibling.nativeID isEqualToString:kLingeringPane] && !sibling.hidden) return sibling;
   return nil;
 }
-
-BOOL Above(NSView *a, NSView *b) {
-  const CGFloat za = a.layer.zPosition, zb = b.layer.zPosition;
-  if (za != zb) return za > zb;
-  NSArray<NSView *> *order = a.superview.subviews;
-  return [order indexOfObjectIdenticalTo:a] > [order indexOfObjectIdenticalTo:b];
-}
 }
 
 @implementation ArdiaWebView (Painting)
@@ -254,7 +246,6 @@ BOOL Above(NSView *a, NSView *b) {
 - (void)applyPainting {
   if (_frameHold.awaiting && !_visible && !_reveal.active) [self finishFrameHold];
   if (_visible || _reveal.active) [self exposePage];
-  if (_visible) [self sinkLingeringPane];
   [self beginFrameHoldIfCold];
   [CATransaction begin];
   [CATransaction setDisableActions:YES];
@@ -516,22 +507,6 @@ BOOL Above(NSView *a, NSView *b) {
   if (!lingering || ![focused isDescendantOf:lingering]) return;
   if (TraceVisibility()) NSLog(@"[ardiacore-vis] %@ takes focus from the lingering New Tab pane", _transferKey);
   if ([window makeFirstResponder:nil]) [self focusAfterLingeringPane];
-}
-
-- (void)sinkLingeringPane {
-  NSView *lingering = LingeringPaneOver(self);
-  NSView *mine = lingering ? PaneUnder(self, lingering.superview) : nil;
-  if (!mine || mine == lingering || !mine.layer || !lingering.layer || !Above(lingering, mine)) return;
-  const CGFloat was = lingering.layer.zPosition, sunk = mine.layer.zPosition - 1;
-  WithoutActions(^{
-    lingering.layer.zPosition = sunk;
-  });
-  if (TraceVisibility()) NSLog(@"[ardiacore-vis] %@ shows over the lingering New Tab pane", _transferKey);
-  __weak NSView *weakPane = lingering;
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(kLingeringPaneSunkSeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    NSView *pane = weakPane;
-    if (pane.layer.zPosition == sunk) pane.layer.zPosition = was;
-  });
 }
 
 - (void)keepPaneBelow:(ArdiaWebView *)held {

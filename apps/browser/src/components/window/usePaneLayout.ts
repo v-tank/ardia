@@ -6,8 +6,10 @@ import type { SplitView } from "../../state/browser/types";
 import { splitGeometry, type Rect } from "./geometry";
 import { useCardFrame } from "./cardFrame";
 import { splitTabIds } from "../../state/splits/splits";
+import { notePageOverlay } from "../../state/telemetry/usage";
 
 const NEW_TAB_LINGER_MS = 400;
+const NEW_TAB_LINGER_LATE_MS = 100;
 
 export function usePaneLayout(windowId: string, activeId: string | undefined, split: SplitView | undefined, fullscreenTab: string | undefined, size: { width: number; height: number }) {
   const mounted = useMountedTabIds(windowId);
@@ -32,7 +34,11 @@ export function usePaneLayout(windowId: string, activeId: string | undefined, sp
   const lingerId = linger.from === activeId ? linger.id : undefined;
   useEffect(() => {
     if (!linger.id) return;
-    const timer = setTimeout(() => setLinger((now) => (now === linger ? { from: now.from } : now)), NEW_TAB_LINGER_MS);
+    const due = Date.now() + NEW_TAB_LINGER_MS;
+    const timer = setTimeout(() => {
+      if (Date.now() - due > NEW_TAB_LINGER_LATE_MS) notePageOverlay("newTabLingerLate");
+      setLinger((now) => (now === linger ? { from: now.from } : now));
+    }, NEW_TAB_LINGER_MS);
     return () => clearTimeout(timer);
   }, [linger]);
   const lingerRect: Rect | undefined = lingerId && size.width > 0 ? { x: 0, y: 0, width: size.width, height: size.height } : undefined;
