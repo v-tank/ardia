@@ -16,12 +16,17 @@ export type PageContext = { tabId: string; url: string; title: string };
 export const usePluginPages = create<{ contexts: Record<string, PageContext> }>()(() => ({ contexts: {} }));
 
 
-const withParam = (url: string, key: string, value: string) => `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
+function withParam(url: string, key: string, value: string): string {
+  const cut = url.indexOf("#");
+  const [head, fragment] = cut < 0 ? [url, ""] : [url.slice(0, cut), url.slice(cut)];
+  return `${head}${head.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}${fragment}`;
+}
 
 function servedAt(served: string, path: string): string {
   if (!path) return served;
   const origin = /^http:\/\/[^/?#]+/.exec(served)?.[0] ?? served;
-  return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
+  const cut = served.indexOf("#");
+  return `${origin}${path.startsWith("/") ? path : `/${path}`}${cut < 0 ? "" : served.slice(cut)}`;
 }
 
 export function pageViewUrl(s: Pick<PluginsStore, "listings" | "records" | "servedUrls">, name: string, context: PageContext | null, path = ""): string | null {

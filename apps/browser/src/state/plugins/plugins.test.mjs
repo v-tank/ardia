@@ -340,3 +340,17 @@ test("pages take a path: each path is its own tab, and a helper opens them with 
   assert.equal((await ask("page.open", { path: "nope path" }, run)).error.code, "bad_request");
   lifecycle.disablePlugin("example");
 });
+
+test("a served page keeps its server's fragment when it gets a path or a context", async () => {
+  const served = JSON.parse(FIXTURE);
+  served.page = { title: "Served", served: true };
+  await install(JSON.stringify(served));
+  assert.ok(lifecycle.requestPluginConsent("example"));
+  assert.ok(lifecycle.enablePlugin("example", P().consent.hash));
+  await settle();
+  usePlugins.setState({ servedUrls: { example: "http://127.0.0.1:4321/app/?v=1#k=secret" } });
+  assert.equal(pageViewUrl(P(), "example", null, "/chats/9"), "http://127.0.0.1:4321/chats/9#k=secret");
+  const context = { tabId: "t", url: "https://a.example/", title: "A" };
+  assert.equal(pageViewUrl(P(), "example", context, ""), `http://127.0.0.1:4321/app/?v=1&ardiaContext=${encodeURIComponent(JSON.stringify(context))}#k=secret`);
+  lifecycle.disablePlugin("example");
+});
