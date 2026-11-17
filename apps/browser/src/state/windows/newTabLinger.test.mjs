@@ -7,7 +7,12 @@ import { PLATFORM_FEATURES as linux } from "../../lib/platformFeatures.linux.ts"
 import { PLATFORM_FEATURES as windows } from "../../lib/platformFeatures.windows.ts";
 
 const original = PLATFORM_FEATURES.newTabWaitsForFirstFrame;
-after(() => { PLATFORM_FEATURES.newTabWaitsForFirstFrame = original; });
+const holdsColdPages = PLATFORM_FEATURES.holdsColdPagesUntilPainted;
+PLATFORM_FEATURES.holdsColdPagesUntilPainted = false;
+after(() => {
+  PLATFORM_FEATURES.newTabWaitsForFirstFrame = original;
+  PLATFORM_FEATURES.holdsColdPagesUntilPainted = holdsColdPages;
+});
 
 for (const waits of [false, true]) {
   test(`a New Tab lingers only when the host can put it behind the first page frame (${waits})`, () => {
