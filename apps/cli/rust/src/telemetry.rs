@@ -187,7 +187,7 @@ fn epoch_seconds(value: &Value) -> Option<f64> {
         Value::Float(number) => Some(if *number > 1e11 { number / 1000.0 } else { *number }),
         Value::Str(text) => match clock::parse_iso(text) {
             clock::Iso::At(seconds) => Some(seconds),
-            clock::Iso::Invalid | clock::Iso::Unported => Some(f64::NEG_INFINITY),
+            clock::Iso::Invalid | clock::Iso::Unported => None,
         },
         _ => None,
     }
@@ -203,6 +203,17 @@ fn valid_id(value: Option<&Value>) -> Option<String> {
             .zip(lengths)
             .all(|(group, length)| group.len() == length && group.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
     valid.then_some(text)
+}
+
+fn unreadable_expiry(doc: &Map) -> bool {
+    doc.get("sharing") == Some(&Value::Bool(true))
+        && matches!(doc.get("sharingUntil"), Some(Value::Str(text)) if !matches!(clock::parse_iso(text), clock::Iso::At(_)))
+}
+
+pub fn consent_unreadable(argv: &[String]) -> bool {
+    cli_target(argv)
+        .and_then(|target| read_consent(Path::new(&target.root)))
+        .is_some_and(|doc| unreadable_expiry(&doc))
 }
 
 pub fn sharing_id(doc: Option<&Map>) -> Option<String> {
@@ -348,6 +359,9 @@ pub fn finish(call: &Call, status: i64, python: Option<&Path>) {
     let Some(target) = cli_target(&call.argv) else { return };
     let root = PathBuf::from(&target.root);
     let doc = read_consent(&root);
+    if doc.as_ref().is_some_and(unreadable_expiry) {
+        return;
+    }
     let install_id = sharing_id(doc.as_ref());
     let record = command_record(call, status, install_id.as_deref().unwrap_or(LOCAL_ONLY_ID), target.environment, doc.as_ref());
     keep_local_copy(&root, &record, install_id.is_some());

@@ -132,7 +132,14 @@ pub fn normpath(text: &str) -> String {
 }
 
 pub fn realpath(text: &str) -> String {
-    let absolute = abspath(Path::new(text));
+    let absolute = if text.starts_with('/') {
+        text.to_string()
+    } else {
+        format!(
+            "{}/{text}",
+            std::env::current_dir().map(|dir| dir.to_string_lossy().into_owned()).unwrap_or_default()
+        )
+    };
     let mut pending: Vec<String> = absolute.split('/').filter(|part| !part.is_empty()).rev().map(str::to_string).collect();
     let mut resolved = PathBuf::from("/");
     let mut hops = 0;
@@ -433,6 +440,24 @@ mod tests {
         assert_eq!(normpath("/a/b/../c/./"), "/a/c");
         assert_eq!(normpath("a/../../b"), "../b");
         assert_eq!(normpath("/../a"), "/a");
+    }
+
+    #[test]
+    fn resolves_links_before_parent_steps_like_posixpath() {
+        let base = std::env::temp_dir().join(format!("ardia-realpath-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("srv/a/b")).unwrap();
+        std::fs::create_dir_all(base.join("rp")).unwrap();
+        std::os::unix::fs::symlink(base.join("srv/a/b"), base.join("rp/link")).unwrap();
+        std::os::unix::fs::symlink("../srv/a/b", base.join("rp/relative")).unwrap();
+        let real = std::fs::canonicalize(&base).unwrap().to_string_lossy().into_owned();
+        let found = (
+            realpath(&format!("{}/rp/link/../data", base.display())),
+            realpath(&format!("{}/rp/relative/../../a/./b/..//missing/..", base.display())),
+        );
+        let _ = std::fs::remove_dir_all(&base);
+        assert_eq!(found.0, format!("{real}/srv/a/data"));
+        assert_eq!(found.1, format!("{real}/srv/a"));
     }
 
     #[test]

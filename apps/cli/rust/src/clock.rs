@@ -60,6 +60,34 @@ fn local_offset(seconds: i64) -> i64 {
     parts.tm_gmtoff as i64
 }
 
+fn naive_to_utc(t: i64, local: impl Fn(i64) -> i64) -> i64 {
+    let a = local(t) - t;
+    let u1 = t - a;
+    let t1 = local(u1);
+    let b = if t1 == t {
+        let earlier = u1 - 86_400;
+        let b = local(earlier) - earlier;
+        if a == b {
+            return u1;
+        }
+        b
+    } else {
+        t1 - u1
+    };
+    let u2 = t - b;
+    if local(u2) == t {
+        return u2;
+    }
+    if t1 == t {
+        return u1;
+    }
+    u1.max(u2)
+}
+
+fn local_seconds(utc: i64) -> i64 {
+    utc + local_offset(utc)
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Iso {
     At(f64),
@@ -149,14 +177,14 @@ fn parse_iso_at(text: &str) -> Option<Iso> {
     let base = days_from_civil(year, month, day) * 86_400;
     let mut chars = rest.chars();
     if chars.next().is_none() {
-        return Some(Iso::At((base - local_offset(base)) as f64));
+        return Some(Iso::At(naive_to_utc(base, local_seconds) as f64));
     }
     let time = chars.as_str();
     let zone_at = time.find(['+', '-']);
     let clock = clock_of(&time[..zone_at.unwrap_or(time.len())])?;
     let Some(zone_at) = zone_at else {
-        let guess = base + clock as i64;
-        return Some(Iso::At((base - local_offset(guess)) as f64 + clock));
+        let whole = clock.floor();
+        return Some(Iso::At(naive_to_utc(base + whole as i64, local_seconds) as f64 + (clock - whole)));
     };
     let sign = if time[zone_at..].starts_with('-') { -1.0 } else { 1.0 };
     let offset = clock_of(&time[zone_at + 1..])?;
@@ -200,6 +228,30 @@ mod tests {
             assert_eq!(parse_iso(text), Iso::Invalid, "{text}");
         }
         assert_eq!(parse_iso("2020-W01-1"), Iso::Unported);
+    }
+
+    #[test]
+    fn reads_a_naive_time_across_daylight_saving_changes_like_python() {
+        let pacific = |utc: i64| {
+            utc + if (1_583_661_600..1_604_221_200).contains(&utc) {
+                -7 * 3600
+            } else {
+                -8 * 3600
+            }
+        };
+        for ((year, month, day, hour, minute, second), utc) in [
+            ((2020, 11, 1, 3, 0, 0), 1_604_228_400),
+            ((2020, 11, 1, 1, 30, 0), 1_604_219_400),
+            ((2020, 11, 1, 0, 30, 0), 1_604_215_800),
+            ((2020, 11, 1, 2, 0, 0), 1_604_224_800),
+            ((2020, 3, 8, 2, 30, 0), 1_583_663_400),
+            ((2020, 3, 8, 3, 0, 0), 1_583_661_600),
+            ((2020, 3, 8, 1, 59, 59), 1_583_661_599),
+            ((2020, 7, 1, 12, 0, 0), 1_593_630_000),
+        ] {
+            let naive = days_from_civil(year, month, day) * 86_400 + hour * 3600 + minute * 60 + second;
+            assert_eq!(naive_to_utc(naive, pacific), utc, "{year}-{month}-{day} {hour}:{minute}:{second}");
+        }
     }
 
     #[test]

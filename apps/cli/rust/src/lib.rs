@@ -261,7 +261,7 @@ pub fn run() -> i32 {
         return pass_through(python.as_deref(), &raw);
     };
     let route = route(&argv);
-    if route == Route::Python {
+    if route == Route::Python || (route != Route::Version && telemetry::consent_unreadable(&argv)) {
         return pass_through(python.as_deref(), &raw);
     }
     let lease = Lease::take(root.as_deref());

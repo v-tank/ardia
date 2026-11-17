@@ -67,7 +67,8 @@ jobs:
       - run: cargo test --locked
       - run: cargo build --locked --release
       - name: Size
-        run: echo "ardia binary: $(wc -c < target/release/ardia) bytes" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "ardia binary: $(wc -c < target/release/ardia) bytes" >> "$GITHUB_STEP_SUMMARY"
       - name: uv
         run: curl -LsSf https://astral.sh/uv/0.12.15/install.sh | sh
       - name: Parity with the Python CLI

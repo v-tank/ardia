@@ -216,9 +216,10 @@ in what it hands to Python.
 A command it serves records the same `cli_command` event Python would (same command, subcommand, flags, exit code and
 error code, `startup_ms` from the process start, `total_ms`), in the same local copy and queue, with `served_by:
 "rust"`; Python's events carry `served_by: "python"`, so a command handed over still counts once, as Python's. It
-reads `telemetry.json`'s `sharingUntil` as Python 3.13's `datetime.fromisoformat` does, except ISO week dates
-(`2026-W47-1`); an expiry it can't read counts as passed, so the event stays local where Python would sometimes queue
-it, never the other way. When
+reads `telemetry.json`'s `sharingUntil` as Python 3.13's `datetime.fromisoformat` does (a time without an offset in
+local time, an hour that occurs twice read as its first one), except ISO week dates (`2026-W47-1`); while sharing is on
+and the expiry is one it can't read, it hands the whole command to Python, which decides, and never queues, keeps or
+deletes an event itself on that date. When
 a flush is due it starts the same detached `python -I` flusher Python starts. It writes `usage.json`'s recent commands
 as Python does. Dashboard: Health › CLI shows, per CLI version, the share of commands Rust served and their median
 time; watch that share grow as commands move over and `served_by: rust` rows among the failures.

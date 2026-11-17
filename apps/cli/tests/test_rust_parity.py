@@ -19,6 +19,8 @@ CRATE = CLI / "rust"
 INSTALL_ID = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
 KEPT_ENV = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR", "USER", "LOGNAME", "SHELL")
 VOLATILE = ("uuid", "timestamp")
+QUEUED = {"uuid": "0190a1b2-c3d4-7e5f-8a9b-000000000001", "event": "cli_command", "distinct_id": INSTALL_ID, "timestamp": "2026-01-01T00:00:00.000Z",
+          "properties": {"command": "earlier"}}
 VOLATILE_PROPERTIES = ("$session_id", "total_ms", "startup_ms", "served_by")
 
 TREE = {
@@ -162,6 +164,8 @@ class RustParity(unittest.TestCase):
         (data / "telemetry.json").write_text(json.dumps({"sharing": True, "installId": INSTALL_ID, **consent}))
         (data / "Telemetry").mkdir(mode=0o700)
         (data / "Telemetry" / "cli-flush.json").write_text(json.dumps({"failures": 0, "next_at": 9e12}))
+        if consent.get("sharing", True) is True:
+            (data / "Telemetry" / "cli-queue.jsonl").write_text(json.dumps(QUEUED) + "\n")
         fake = None
         if socket_ok:
             fake = FakeArdia(data / "ArdiaControl.sock", {"hello": hello, **replies})
@@ -263,14 +267,9 @@ class RustParity(unittest.TestCase):
         self.check("windows", replies={"windows": {"result": []}}, consent={"sharing": False})
         self.check("windows", replies={"windows": {"result": []}}, consent={"sessionOpen": True, "sessionId": INSTALL_ID, "watchReport": "FB-AB12"})
 
-    def test_an_expiry_it_cannot_read_keeps_the_event_local(self):
-        for until in ("2999-W01-1", "2020-02-30T00:00:00Z", "not a date"):
-            run, _, data = self.run_side("rust", ["windows"], {"windows": {"result": []}}, {}, b"", True, {"result": {"app": "Ardia"}}, {"sharingUntil": until})
-            records, queued, _ = self.telemetry(data)
-            self.assertEqual(run.returncode, 0, run.stderr)
-            self.assertEqual([(record["distinct_id"], record["sent"]) for record in records], [("local", False)], until)
-            self.assertEqual(queued, [], until)
-            self.case = Path(tempfile.mkdtemp(prefix="c", dir=self.scratch))
+    def test_an_expiry_it_cannot_read_goes_to_python(self):
+        for until in ("2030-W01-1T00:00:00+00:00", "2999-W01-1", "2020-02-30T00:00:00Z", "not a date"):
+            self.check("windows", replies={"windows": {"result": []}}, consent={"sharingUntil": until}, served="python")
 
     def test_opt_outs_match(self):
         for name, value in (("ARDIA_TELEMETRY", "off\u001c"), ("ARDIA_TELEMETRY", " No\u001f"), ("DO_NOT_TRACK", "0\u001f"), ("DO_NOT_TRACK", "\u001c")):
