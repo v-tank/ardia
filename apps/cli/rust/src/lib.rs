@@ -226,6 +226,7 @@ fn serve_listing(kind: Kind, listing: &Listing, argv: &[String], python: Option<
             }
         }
         Err(control::Failure::Method { code, message }) => commands::method_failed(kind, listing, &code, &message),
+        Err(control::Failure::Unported) => return None,
         Err(control::Failure::Interrupted) => Rendered {
             complaint: Some(format!("ardia {}: interrupted", kind.name())),
             status: 130,

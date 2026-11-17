@@ -185,7 +185,11 @@ fn epoch_seconds(value: &Value) -> Option<f64> {
             Some(if number > 1e11 { number / 1000.0 } else { number })
         }
         Value::Float(number) => Some(if *number > 1e11 { number / 1000.0 } else { *number }),
-        Value::Str(text) => clock::parse_iso(text),
+        Value::Str(text) => match clock::parse_iso(text) {
+            clock::Iso::At(seconds) => Some(seconds),
+            clock::Iso::Invalid => None,
+            clock::Iso::Unported => Some(f64::NEG_INFINITY),
+        },
         _ => None,
     }
 }
@@ -559,6 +563,18 @@ fn spawn_flusher(python: &Path, target: &Target) {
     unsafe {
         command.pre_exec(|| {
             libc::setsid();
+            let mut limit: libc::rlimit = std::mem::zeroed();
+            let highest = if libc::getrlimit(libc::RLIMIT_NOFILE, &mut limit) == 0 {
+                (limit.rlim_cur as i64).clamp(3, 65_536)
+            } else {
+                1024
+            } as libc::c_int;
+            for fd in 3..highest {
+                let flags = libc::fcntl(fd, libc::F_GETFD);
+                if flags >= 0 {
+                    libc::fcntl(fd, libc::F_SETFD, flags | libc::FD_CLOEXEC);
+                }
+            }
             libc::signal(libc::SIGPIPE, libc::SIG_DFL);
             libc::signal(libc::SIGINT, libc::SIG_DFL);
             Ok(())

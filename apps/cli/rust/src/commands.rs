@@ -121,7 +121,7 @@ fn windows(listing: &Listing, result: &Value) -> Shape<Rendered> {
             .find(|value| truthy(value))
             .map_or(Ok(String::new()), str_of)?;
         let id = str_of(fields.get("id").unwrap_or(&Value::Null))?;
-        out.say(shown(format!("window {id}  {}  {profile}", flags.join(", ")).trim_end()));
+        out.say(shown(py::rstrip(&format!("window {id}  {}  {profile}", flags.join(", ")))));
         for tab in iterate_or_empty(fields.get("tabs").unwrap_or(&Value::Null))? {
             let tab = dict(&tab)?;
             let marks = format!(
@@ -286,7 +286,7 @@ fn tab_line(tab: &Value, prefix: &str) -> Shape<String> {
     let active = if fields.get("active").is_some_and(truthy) { "*" } else { " " };
     let id = shown_of(fields.get("id").unwrap_or(&Value::Null))?;
     let url = shown_of(fields.get("url").unwrap_or(&Value::Null))?;
-    Ok(format!("{active} {prefix}{id}  {title}  {url}{tail}").trim_end().to_string())
+    Ok(py::rstrip(&format!("{active} {prefix}{id}  {title}  {url}{tail}")).to_string())
 }
 
 fn group_line(group: &Value, indent: &str) -> Shape<String> {

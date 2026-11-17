@@ -136,6 +136,14 @@ pub fn str_of(value: &Value) -> Shape<String> {
     }
 }
 
+pub fn is_space(c: char) -> bool {
+    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+}
+
+pub fn rstrip(text: &str) -> &str {
+    text.trim_end_matches(is_space)
+}
+
 pub fn right(text: &str, width: usize) -> String {
     let count = text.chars().count();
     format!("{}{}", " ".repeat(width.saturating_sub(count)), text)
@@ -157,6 +165,7 @@ mod tests {
         assert_eq!(str_of(&value).unwrap(), r#"[None, True, 1.0, 10, "a'b", {'k': [1, 'x"y']}, 1e+16]"#);
         assert_eq!(repr_str("a'b\"c").unwrap(), r#"'a\'b"c'"#);
         assert_eq!(repr_str("é"), Err(Unsupported));
+        assert_eq!(rstrip("p\u{1c} \u{85}\u{3000}"), "p");
     }
 
     #[test]

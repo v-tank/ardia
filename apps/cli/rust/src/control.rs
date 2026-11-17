@@ -40,6 +40,7 @@ pub enum Failure {
     Unreachable { message: String, sent: bool },
     Method { code: String, message: String },
     Interrupted,
+    Unported,
 }
 
 impl Failure {
@@ -300,10 +301,10 @@ impl Connection {
                 .get("message")
                 .filter(|text| py::truthy(text))
                 .map_or(Ok("failed".to_string()), py::str_of);
-            return Err(Failure::Method {
-                code: code.unwrap_or_else(|_| "failed".into()),
-                message: message.unwrap_or_else(|_| "failed".into()),
-            });
+            let (Ok(code), Ok(message)) = (code, message) else {
+                return Err(Failure::Unported);
+            };
+            return Err(Failure::Method { code, message });
         }
         Ok(reply.get("result").cloned().unwrap_or(Value::Null))
     }

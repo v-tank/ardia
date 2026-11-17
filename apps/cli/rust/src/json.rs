@@ -314,7 +314,11 @@ pub fn float_repr(value: f64) -> String {
     if value.is_infinite() {
         return if value > 0.0 { "inf" } else { "-inf" }.to_string();
     }
-    let scientific = format!("{:e}", value.abs());
+    let magnitude = value.abs();
+    let scientific = (0..17)
+        .map(|precision| format!("{magnitude:.precision$e}"))
+        .find(|text| text.parse::<f64>() == Ok(magnitude))
+        .unwrap_or_else(|| format!("{magnitude:e}"));
     let (mantissa, exponent) = scientific.split_once('e').unwrap_or((&scientific, "0"));
     let exponent: i32 = exponent.parse().unwrap_or(0);
     let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
@@ -466,6 +470,10 @@ mod tests {
             (1763412345.123456, "1763412345.123456"),
             (1.5e-7, "1.5e-07"),
             (2.5e300, "2.5e+300"),
+            (807960295084425.2, "807960295084425.2"),
+            (0.1 + 0.2, "0.30000000000000004"),
+            (5e-324, "5e-324"),
+            (1.7976931348623157e308, "1.7976931348623157e+308"),
         ];
         for (value, shown) in cases {
             assert_eq!(float_repr(value), shown);

@@ -1,5 +1,6 @@
 import json
 import os
+import select
 import shutil
 import site
 import socket
@@ -153,14 +154,13 @@ class RustParity(unittest.TestCase):
         env.update(extra)
         return env
 
-    def run_side(self, side, argv, replies, extra, stdin, socket_ok, hello, flush=False):
+    def run_side(self, side, argv, replies, extra, stdin, socket_ok, hello, consent):
         data = self.case / "data"
         data.mkdir(parents=True)
         (self.case / "home").mkdir(exist_ok=True)
-        (data / "telemetry.json").write_text(json.dumps({"sharing": True, "installId": INSTALL_ID}))
-        if not flush:
-            (data / "Telemetry").mkdir(mode=0o700)
-            (data / "Telemetry" / "cli-flush.json").write_text(json.dumps({"failures": 0, "next_at": 9e12}))
+        (data / "telemetry.json").write_text(json.dumps({"sharing": True, "installId": INSTALL_ID, **consent}))
+        (data / "Telemetry").mkdir(mode=0o700)
+        (data / "Telemetry" / "cli-flush.json").write_text(json.dumps({"failures": 0, "next_at": 9e12}))
         fake = None
         if socket_ok:
             fake = FakeArdia(data / "ArdiaControl.sock", {"hello": hello, **replies})
@@ -196,11 +196,11 @@ class RustParity(unittest.TestCase):
         path = self.case / side / "cli-home" / "Usage" / "usage.json"
         return json.loads(path.read_text()) if path.exists() else None
 
-    def check(self, *argv, replies=None, extra=None, stdin=b"", socket_ok=True, hello=None, served="rust"):
+    def check(self, *argv, replies=None, extra=None, stdin=b"", socket_ok=True, hello=None, served="rust", consent=None):
         replies = replies or {}
         hello = hello or {"result": {"app": "Ardia", "version": "1.0"}}
-        rust, rust_requests, rust_data = self.run_side("rust", argv, replies, extra or {}, stdin, socket_ok, hello)
-        python, python_requests, python_data = self.run_side("python", argv, replies, extra or {}, stdin, socket_ok, hello)
+        sides = [self.run_side(side, argv, replies, extra or {}, stdin, socket_ok, hello, consent or {}) for side in ("rust", "python")]
+        (rust, rust_requests, rust_data), (python, python_requests, python_data) = sides
         label = " ".join(argv) or "(no arguments)"
         self.assertEqual(rust.stdout, python.stdout, f"stdout of {label}")
         self.assertEqual(rust.stderr, python.stderr, f"stderr of {label}")
@@ -233,6 +233,8 @@ class RustParity(unittest.TestCase):
         self.check("commands", replies={"commands": {"result": COMMANDS}})
         self.check("--json", "commands", replies={"commands": {"result": COMMANDS}})
         self.check("windows", replies={"windows": {"result": None}})
+        self.check("windows", replies={"windows": {"result": [{"id": 1, "profileName": "p\u001c \u0085", "tabs": []}]}})
+        self.check("commands", "--json", replies={"commands": {"result": [{"memory": 807960295084425.2, "cpu": 0.30000000000000004, "big": 1e300}]}})
 
     def test_the_data_dir_flag_wins(self):
         other = self.case / "elsewhere"
@@ -252,12 +254,20 @@ class RustParity(unittest.TestCase):
         self.check("windows", socket_ok=False)
         self.check("tabs", hello={"result": {"app": "Something"}})
         self.check("tabs", hello={"error": {"code": "x", "message": "go away"}})
+        self.check("windows", replies={"windows": {"error": {"code": 7, "message": ["a", 1.5]}}})
+
+    def test_consent_matches(self):
+        for until in ("2020-01-01T00:00:00+0000", "20200101T000000Z", "2999-01-01 10", "2020-02-30T00:00:00Z", "not a date", 1_000, 99_999_999_999_999):
+            self.check("windows", replies={"windows": {"result": []}}, consent={"sharingUntil": until})
+        self.check("windows", replies={"windows": {"result": []}}, consent={"sharing": False})
+        self.check("windows", replies={"windows": {"result": []}}, consent={"sessionOpen": True, "sessionId": INSTALL_ID, "watchReport": "FB-AB12"})
 
     def test_shapes_it_cannot_mirror_go_to_python(self):
         self.check("tabs", replies={"workspace": {"result": 3}}, served="python")
         self.check("tabs", replies={"workspace": {"result": "oops"}}, served="python")
         self.check("windows", replies={"windows": {"result": [{"id": 1, "tabs": ["x"]}]}}, served="python")
         self.check("commands", replies={"commands": {"result": [{"id": "a", "variants": 5}]}}, served="python")
+        self.check("commands", replies={"commands": {"error": {"code": "failed", "message": ["\u00e9"]}}}, served="python")
 
     def test_other_commands_pass_through(self):
         ops = {"apply": {"result": {"ok": True, "applied": 1, "results": [{"op": "open", "tabs": ["tab-8"]}], "tabs": [{"id": "tab-8", "title": "New"}]}}}
@@ -283,11 +293,20 @@ class RustParity(unittest.TestCase):
         collector = ThreadingHTTPServer(("127.0.0.1", 0), Collector)
         threading.Thread(target=collector.serve_forever, daemon=True).start()
         Collector.bodies.clear()
+        data = self.case / "data"
+        data.mkdir()
+        (self.case / "home").mkdir()
+        (data / "telemetry.json").write_text(json.dumps({"sharing": True, "installId": INSTALL_ID}))
+        fake = FakeArdia(data / "ArdiaControl.sock", {"hello": {"result": {"app": "Ardia"}}, "windows": {"result": []}})
+        reader, writer = os.pipe()
         try:
             url = f"http://127.0.0.1:{collector.server_address[1]}/v1/logs"
-            done, _, data = self.run_side("rust", ["windows"], {"windows": {"result": []}}, {"ARDIA_TELEMETRY_URL": url}, b"", True,
-                                          {"result": {"app": "Ardia"}}, flush=True)
+            done = subprocess.run([str(self.root / "bin" / "ardia"), "windows"], capture_output=True, pass_fds=(writer,),
+                                  env=self.environment({"ARDIA_TELEMETRY_URL": url}), timeout=30)
+            os.close(writer)
             self.assertEqual(done.returncode, 0, done.stderr)
+            self.assertTrue(select.select([reader], [], [], 1.5)[0], "the flusher kept a descriptor it inherited")
+            self.assertEqual(os.read(reader, 1), b"")
             deadline = time.monotonic() + 20
             while not Collector.bodies and time.monotonic() < deadline:
                 time.sleep(0.1)
@@ -300,6 +319,8 @@ class RustParity(unittest.TestCase):
                 time.sleep(0.1)
             self.assertFalse((data / "Telemetry" / "cli-queue.jsonl").exists())
         finally:
+            os.close(reader)
+            fake.close()
             collector.shutdown()
             collector.server_close()
 
@@ -332,6 +353,7 @@ class Collector(BaseHTTPRequestHandler):
 
     def do_POST(self):
         Collector.bodies.append(self.rfile.read(int(self.headers["Content-Length"])))
+        time.sleep(3)
         self.send_response(200)
         self.end_headers()
 
