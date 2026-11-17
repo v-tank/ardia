@@ -204,9 +204,12 @@ fn serve_listing(kind: Kind, listing: &Listing, argv: &[String], python: Option<
         Kind::Groups => GROUPS_FLAGS,
         Kind::Windows | Kind::Commands => LISTING_FLAGS,
     };
-    control::catch_interrupts();
+    let interrupts = control::catch_interrupts();
     let caller = caller::current();
-    let rendered = match control::call(listing.data_dir.as_deref(), kind.method(), listing.params(kind), &caller) {
+    let reply = control::call(listing.data_dir.as_deref(), kind.method(), listing.params(kind), &caller);
+    drop(interrupts);
+    let reply = if control::interrupted() { Err(control::Failure::Interrupted) } else { reply };
+    let rendered = match reply {
         Ok(result) => {
             if matches!(kind, Kind::Tabs | Kind::Groups) && matches!(result, Value::Bool(_) | Value::Int(_) | Value::BigInt(_)) {
                 return None;
@@ -261,7 +264,7 @@ pub fn run() -> i32 {
         return pass_through(python.as_deref(), &raw);
     };
     let route = route(&argv);
-    if route == Route::Python || (route != Route::Version && telemetry::consent_unreadable(&argv)) {
+    if route == Route::Python || (route != Route::Version && (!paths::paths_are_text() || telemetry::consent_unreadable(&argv))) {
         return pass_through(python.as_deref(), &raw);
     }
     let lease = Lease::take(root.as_deref());

@@ -39,6 +39,27 @@ fn passwd_home(name: Option<&str>) -> Option<String> {
     }
 }
 
+const PATH_VARIABLES: &[&str] = &["ARDIA_DATA_DIR", "HOME", "ARDIA_CLI_HOME", "ARDIA_CONFIG_HOME", "XDG_CONFIG_HOME"];
+
+pub fn paths_are_text() -> bool {
+    let variables = PATH_VARIABLES
+        .iter()
+        .all(|name| std::env::var_os(name).is_none_or(|value| value.to_str().is_some()));
+    let cwd = std::env::current_dir().map_or(true, |dir| dir.to_str().is_some());
+    let account_home = std::env::var_os("HOME").is_some() || passwd_home_bytes().is_none_or(|bytes| std::str::from_utf8(&bytes).is_ok());
+    variables && cwd && account_home
+}
+
+fn passwd_home_bytes() -> Option<Vec<u8>> {
+    unsafe {
+        let entry = libc::getpwuid(libc::getuid());
+        if entry.is_null() || (*entry).pw_dir.is_null() {
+            return None;
+        }
+        Some(CStr::from_ptr((*entry).pw_dir).to_bytes().to_vec())
+    }
+}
+
 pub fn home() -> PathBuf {
     PathBuf::from(env("HOME").or_else(|| passwd_home(None)).unwrap_or_default())
 }

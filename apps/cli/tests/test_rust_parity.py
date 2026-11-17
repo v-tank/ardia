@@ -321,6 +321,44 @@ class RustParity(unittest.TestCase):
         self.check(extra={"COLUMNS": "90"})
         self.check("--help", extra={"COLUMNS": "40"}, served="python")
 
+    def test_ctrl_c_stops_a_command_blocked_on_its_output(self):
+        tabs = [{"type": "tab", "id": f"tab-{index}", "title": "t" * 40, "url": "https://example.com/" + "p" * 40} for index in range(3000)]
+        data = self.case / "data"
+        data.mkdir()
+        fake = FakeArdia(data / "ArdiaControl.sock", {"hello": {"result": {"app": "Ardia"}}, "workspace": {"result": {"windows": [{"id": "w-1", "spaces": [{"profile": "p", "tabs": tabs}]}]}}})
+        try:
+            listing = subprocess.Popen([str(self.root / "bin" / "ardia"), "tabs", "--json"], env=self.environment({}), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            deadline = time.monotonic() + 20
+            while not any(method == "workspace" for method, _ in fake.requests) and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertIn("workspace", [method for method, _ in fake.requests])
+            time.sleep(1)
+            self.assertIsNone(listing.poll(), "the output should fill the pipe and block")
+            listing.send_signal(signal.SIGINT)
+            deadline = time.monotonic() + 5
+            while listing.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertIsNotNone(listing.poll(), "Ctrl-C didn't stop a command blocked on its output")
+        finally:
+            listing.kill()
+            listing.communicate()
+            fake.close()
+
+    def test_paths_that_are_not_utf8_go_to_python(self):
+        lossy = self.case / "data-\ufffd"
+        lossy.mkdir()
+        fake = FakeArdia(lossy / "ArdiaControl.sock", {"hello": {"result": {"app": "Ardia"}}, "windows": {"result": [{"id": 1, "tabs": []}]}})
+        try:
+            for name, value in (("ARDIA_DATA_DIR", str(self.case / "data-\udcff")), ("ARDIA_CLI_HOME", str(self.case / "home-\udcff"))):
+                env = self.environment({name: value})
+                rust = subprocess.run([str(self.root / "bin" / "ardia"), "windows"], env=env, capture_output=True, timeout=30)
+                python = subprocess.run([str(self.python), "-I", "-m", "ardia_cli", "windows"], env=env, capture_output=True, timeout=30)
+                self.assertEqual((rust.returncode, rust.stdout, rust.stderr), (python.returncode, python.stdout, python.stderr), name)
+            self.assertEqual(fake.requests, [])
+            self.assertFalse((self.case / "home-\ufffd").exists())
+        finally:
+            fake.close()
+
     def test_its_events_reach_the_collector_through_the_python_flusher(self):
         collector = ThreadingHTTPServer(("127.0.0.1", 0), Collector)
         threading.Thread(target=collector.serve_forever, daemon=True).start()

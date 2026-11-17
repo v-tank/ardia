@@ -26,13 +26,21 @@ extern "C" fn on_interrupt(_: libc::c_int) {
     INTERRUPTED.store(true, Ordering::SeqCst);
 }
 
-pub fn catch_interrupts() {
-    let handler: extern "C" fn(libc::c_int) = on_interrupt;
-    unsafe {
-        if libc::signal(libc::SIGINT, handler as libc::sighandler_t) == libc::SIG_IGN {
-            libc::signal(libc::SIGINT, libc::SIG_IGN);
-        }
+pub struct Interrupts(libc::sighandler_t);
+
+impl Drop for Interrupts {
+    fn drop(&mut self) {
+        unsafe { libc::signal(libc::SIGINT, self.0) };
     }
+}
+
+pub fn catch_interrupts() -> Interrupts {
+    let handler: extern "C" fn(libc::c_int) = on_interrupt;
+    let previous = unsafe { libc::signal(libc::SIGINT, handler as libc::sighandler_t) };
+    if previous == libc::SIG_IGN {
+        unsafe { libc::signal(libc::SIGINT, libc::SIG_IGN) };
+    }
+    Interrupts(previous)
 }
 
 pub fn interrupted() -> bool {

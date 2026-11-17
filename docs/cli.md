@@ -197,7 +197,8 @@ Everything else goes to Python unchanged: the binary `exec`s `<install>/python/b
 same arguments, environment, stdin, stdout and stderr, in the same process, so the exit code, the lease and the
 telemetry are Python's own. It also hands over whenever it can't be sure to match: an argument spelled any other way
 (an abbreviated flag, a value that starts with `-`, `--pid` that isn't plain digits, an unknown flag, `--`, a help
-flag after a command), an argument that isn't UTF-8, a terminal so narrow that argparse would wrap the usage line, or
+flag after a command), an argument or a path setting that isn't UTF-8 (`ARDIA_DATA_DIR`, `HOME`, `ARDIA_CLI_HOME`,
+`ARDIA_CONFIG_HOME`, `XDG_CONFIG_HOME`, the working directory), a terminal so narrow that argparse would wrap the usage line, or
 a reply whose shape Python would print differently or crash on (a tree that isn't an object, a window that isn't one,
 a non-ASCII string inside a list printed with `repr`). For a reply it renders the whole output first and prints
 nothing until it knows it can, then hands over, and Python asks Ardia again: these are read-only calls. The one
@@ -211,8 +212,8 @@ the caller name (`caller.rs`: libproc and `KERN_PROCARGS2` on macOS, `/proc` on 
 form), Python's JSON (`json.rs`: `json.loads`'s grammar including `NaN`, ordered keys, lone surrogates, and
 `json.dumps`'s separators, `ensure_ascii` and `repr` floats), the terminal output guard (`printable.rs`) and the
 telemetry and usage writers (`telemetry.rs`, `usage.rs`). Endpoint resolution (`--ws`, `--port`,
-`ArdiaControl.json`) and the CDP client stay in Python until a ported command needs them. Ctrl-C prints `ardia
-<command>: interrupted` and exits 130, as Python does; a SIGINT the caller ignores stays ignored, in the command and
+`ArdiaControl.json`) and the CDP client stay in Python until a ported command needs them. Ctrl-C while it waits for Ardia prints `ardia
+<command>: interrupted` and exits 130, as Python does, and stops it outright while it prints; a SIGINT the caller ignores stays ignored, in the command and
 in what it hands to Python.
 
 A command it serves records the same `cli_command` event Python would (same command, subcommand, flags, exit code and
