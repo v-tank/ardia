@@ -29,6 +29,11 @@ public class PluginsModule: Module {
 
     Function("call") { (name: String, run: Int, line: String) in PluginHost.shared.call(name, run: run, line) }
 
+    AsyncFunction("browse") { (name: String, argv: [String], timeoutMs: Int, promise: Promise) in
+      guard PluginFolders.isName(name) else { return promise.reject("ERR_BAD_ARGS", "browse needs a plugin's name") }
+      PluginBrowse.run(session: "plugin-\(name)", argv: argv, timeoutMs: timeoutMs) { promise.resolve($0) }
+    }
+
     AsyncFunction("remove") { (name: String, promise: Promise) in Self.remove(name, promise) }
       .runOnQueue(.main)
 

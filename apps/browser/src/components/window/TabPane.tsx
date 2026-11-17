@@ -18,6 +18,8 @@ import { NewTabDropArea } from "./NewTabDropArea";
 import { TabContentArea } from "./TabContentArea";
 import { InternalPage } from "../pages";
 import { ShareBar } from "../media/ShareBar";
+import { PluginBanner } from "../plugins/PluginBanner";
+import { PLATFORM_FEATURES } from "../../lib/platformFeatures";
 import { Toolbar, ToolbarBackdrop } from "../toolbar/Toolbar";
 import { AutoHideBackdrop, AutoHideToolbar, useToolbarMode, useToolbarMotion } from "../toolbar/AutoHideToolbar";
 import { publishPaneChrome } from "../toolbar/WindowToolbar";
@@ -144,6 +146,7 @@ export const TabPane = memo(function TabPane({
         {autoLayout && bookmarksBar && <BookmarksBar tabId={tabId} placeholder={!visible} />}
         <View style={{ flex: 1 }}>
           {visible && !fullscreen && <ShareBar tabId={tabId} />}
+          {visible && !fullscreen && PLATFORM_FEATURES.plugins && <PluginBanner tabId={tabId} />}
           <View style={{ flex: 1 }}>
             {(mounted || prewarmed) && <TabWebView tabId={tabId} visible={visible && !newTabShown && !isNewTab} selected={focused} warm={!!warm && !newTabShown && !isNewTab} />}
             {visible && isNewTab && !small && (

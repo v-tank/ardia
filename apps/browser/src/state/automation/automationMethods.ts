@@ -7,7 +7,7 @@ import { AUTOMATION_EVENTS, MIN_IDLE_SECONDS, NAMED_ONLY_EVENTS, type Automation
 
 export const PROTOCOL = 4;
 
-export type ErrorCode = "bad_request" | "unknown_method" | "unknown_command" | "refused" | "no_window" | "failed";
+export type ErrorCode = "bad_request" | "unknown_method" | "unknown_command" | "refused" | "no_window" | "failed" | "in_split" | "not_in_split";
 export type MethodError = { code: ErrorCode; message: string };
 export type RequestId = number | string | null;
 export type ParsedRequest = { id: RequestId; method: string; params: Record<string, unknown> };

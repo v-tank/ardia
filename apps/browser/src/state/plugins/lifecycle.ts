@@ -1,4 +1,4 @@
-import { defaultValues, rowValue } from "../../lib/pluginManifest";
+import { defaultValues, LIMITS, rowValue, type RowSpec } from "../../lib/pluginManifest";
 import { listPluginFolders, removePluginFiles, type PluginFolderEntry } from "../../platform/plugins";
 import { systemInfo } from "../../platform/app";
 import { onConfigChange } from "../../platform/configFolder";
@@ -142,11 +142,19 @@ export async function removePlugin(name: string): Promise<{ ok: boolean; reason?
   return { ok: true };
 }
 
-export function setPluginValue(name: string, key: string, value: string | boolean) {
+function valueRule(row: RowSpec): string {
+  if (row.type === "toggle") return `${row.key} is true or false.`;
+  if (row.type === "text") return `${row.key} is text of at most ${LIMITS.rowText} characters, without control characters.`;
+  return `${row.key} is one of ${row.choices.map((c) => c.value).join(", ")}.`;
+}
+
+export function setPluginValue(name: string, key: string, value: unknown): string | null {
   const row = currentPlugins().listings[name]?.manifest?.settings.rows.find((r) => r.key === key);
-  if (!row || rowValue(row, value) !== value) return;
-  if (!updateRecord(name, (r) => ({ ...(r === NO_RECORD ? { ...NO_RECORD } : r), values: { ...r.values, [key]: value } }))) return;
+  if (!row) return `This plugin has no setting ${key}.`;
+  if ((typeof value !== "string" && typeof value !== "boolean") || rowValue(row, value) !== value) return valueRule(row);
+  if (!updateRecord(name, (r) => ({ ...(r === NO_RECORD ? { ...NO_RECORD } : r), values: { ...r.values, [key]: value } }))) return "The value couldn't be saved.";
   if (activeManifest(currentPlugins(), name)) sendValues(name);
+  return null;
 }
 
 let started = false;

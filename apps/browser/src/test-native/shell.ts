@@ -421,6 +421,8 @@ export const pluginHost = {
   events: [] as { name: string; run: number; line: string }[],
   removed: [] as string[],
   startResult: null as null | { ok: false; reason: string },
+  browses: [] as { name: string; argv: string[]; timeoutMs: number }[],
+  browseReply: null as null | ((argv: string[]) => import("@ardia/shell").PluginBrowseRun),
   nextRun: 0,
 };
 const pluginEvents = nativeEvents();
@@ -439,6 +441,10 @@ const plugins: Modules["ArdiaPlugins"] = {
   event: (name, run, line) => void pluginHost.events.push({ name, run, line }),
   call: (name, run, line) => void pluginHost.events.push({ name, run, line }),
   remove: async (name) => (pluginHost.removed.push(name), (pluginHost.folders = pluginHost.folders.filter((f) => f.name !== name)), { ok: true }),
+  browse: async (name, argv, timeoutMs) => {
+    pluginHost.browses.push({ name, argv: [...argv], timeoutMs });
+    return pluginHost.browseReply?.(argv) ?? { ok: false, missing: true };
+  },
   revealLog: () => {},
   revealFolder: () => {},
   devSnapshotPage: async () => false,

@@ -12,6 +12,8 @@ export function consentLines(m: PluginManifest): ConsentLine[] {
   else if (m.process) lines.push({ icon: "network.slash", text: `That program can't connect beyond this ${PLATFORM_TERMS.computer}` });
   if (m.permissions.includes("tabs")) lines.push({ icon: "square.on.square", text: m.permissions.includes("fullUrls") ? "Sees the full address and title of your tabs" : "Sees the address (without what follows ? or #) and title of your tabs" });
   if (m.hooks.length) lines.push({ icon: "bell", text: `Hears these events: ${m.hooks.join(", ")}` });
+  if (m.permissions.includes("arrange")) lines.push({ icon: "rectangle.3.group", text: "Opens, moves, groups and closes your tabs" });
+  if (m.permissions.includes("pages")) lines.push({ icon: "cursorarrow.click.2", text: "Reads and acts on the pages in your tabs" });
   if (m.permissions.includes("commands")) lines.push({ icon: "command", text: "Runs Ardia commands, like opening and closing tabs" });
   const defaults = Object.keys(m.settings.defaults);
   if (defaults.length) lines.push({ icon: "slider.horizontal.3", text: `Changes these settings while it's on: ${defaults.join(", ")}` });

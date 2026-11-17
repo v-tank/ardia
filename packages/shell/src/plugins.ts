@@ -13,6 +13,9 @@ export type PluginStartResult = { ok: true; run: number; pid: number } | { ok: f
 export type PluginExit = { name: string; run: number; status: number | null; signal: number | null; overMemory: boolean };
 export type PluginLine = { name: string; run: number; line: string };
 export type PluginRemoveResult = { ok: true } | { ok: false; reason: string };
+export type PluginBrowseRun =
+  | { ok: true; status: number; timedOut: boolean; truncated: boolean; stdout: string; stderr: string }
+  | { ok: false; missing?: true; reason?: string };
 
 export type PluginsNative = {
   folder(): string;
@@ -23,6 +26,7 @@ export type PluginsNative = {
   event(name: string, run: number, line: string): void;
   call(name: string, run: number, line: string): void;
   remove(name: string): Promise<PluginRemoveResult>;
+  browse(name: string, argv: string[], timeoutMs: number): Promise<PluginBrowseRun>;
   revealLog(name: string): void;
   revealFolder(): void;
   devSnapshotPage(name: string, path: string): Promise<boolean>;

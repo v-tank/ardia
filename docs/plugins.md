@@ -164,6 +164,8 @@ Needs a `process`.
 | `fullUrls` | Those URLs in full (needs `tabs`) |
 | `commands` | The helper may run Ardia's commands, the same ones and with the same refusals as the `ardia` command (`docs/automation.md` › Which commands) |
 | `network` | The helper may connect beyond this Mac. Without it, only to this Mac's own addresses |
+| `arrange` | The helper may call `apply`, `group.withPage` and `split.toGroup`: open, move, group and close tabs (needs `tabs`). Consent: "Opens, moves, groups and closes your tabs" |
+| `pages` | The helper may call `browse` and `tab.banner`: read and act on the pages in your tabs through the `ardia browse` layer (needs `tabs`). Consent: "Reads and acts on the pages in your tabs" |
 
 Contributions grant their own reach and are shown too: running a program, adding a page, adding commands, changing
 named Ardia settings, offering tools.
@@ -258,12 +260,47 @@ Requests from the helper (`{"id", "method", "params"}`):
 | `page.open` `{"path"?, "split"?, "side"?, "context"?}` | a `page`; `context` needs `tabs` | `{"tabId", "windowId"}`: opens the plugin's page at that path in the last focused window, as a tab or in Split View beside the current tab |
 | `tools.call` `{"plugin", "tool", "input"?}` | every permission the other plugin has | the tool's result, or its error; the plugin must be on and running. A plugin can't reach through another plugin's tools to what it wasn't granted itself |
 | `result` `{"call", "result"? , "error"?}` | | `{"ok": true}`: the answer to a call (below) |
+| `workspace` `{"window"?, "profile"?, "usage"?}` | `tabs` | the control socket's `workspace` (`docs/automation.md` › Tabs and groups), the same code: private windows and incognito never appear, Ardia's own pages show without their query. URLs come without their query and fragment unless `fullUrls`; plugin page tabs show as `ardia://<name>/<path>` |
+| `apply` `{"ops"}` | `arrange` | the control socket's `apply`, the same operations, checks and results (URLs minimized as above). It stops before its next operation if the plugin turns off |
+| `group.withPage` `{"tab", "tabs"?}` | `arrange` | `{"group", "tabs"}` (the group's tabs in order). `tab` is one of this plugin's page tabs. In a group: `tabs` move into that group right after it. Not grouped and not in Split View: a new group, the page tab first then `tabs`, named after the page tab's title, icon `symbol:sparkles`. Not grouped but in Split View: `in_split` |
+| `split.toGroup` `{"tab"}` | `arrange` | `{"group", "tabs"}`: the Split View holding this plugin's page tab is taken apart and its panes become a group, the page tab first, named as above. A split already in a group leaves its panes in that group, and that group is the answer. Not in a split: `not_in_split` |
+| `browse` `{"tab", "argv"}` | `pages` | `{"ok": true, "text"}` or `{"ok": false, "error"}`: runs one `ardia browse` command (below) on that tab |
+| `tab.banner` `{"tab", "text"}` | `pages` | `{"ok": true}`: a strip at the top of that tab's page showing `text · Stop` (1 to 80 characters; `null` clears it). One plugin's banner per tab. Stop sends `{"event": "plugin.bannerAction", "data": {"tab"}}` to the helper, subscribed or not, and the strip says "Stopping…" until the helper clears it. Banners go when the plugin stops or the tab closes |
+| `values.set` `{"key", "value"}` | | `{"ok": true}`: sets one of the plugin's own rows, checked like a change in Settings (a toggle's boolean, a text row's up to 200 characters, one of a choice row's values), then sends `plugin.values` |
 
 A method the manifest doesn't allow is `refused`. Events from Ardia: `plugin.values` (`{"values"}`) when you change a
-row, plus the subscribed events. Calls to a tool arrive as `{"call": "c4", "tool": "hello", "input": {…},
+row (or the helper does with `values.set`), `plugin.bannerAction` when you press a banner's Stop, plus the subscribed events. Calls to a tool arrive as `{"call": "c4", "tool": "hello", "input": {…},
 "caller": {"kind": "command" | "cli" | "plugin", "plugin"?}, "deadline": ms}`; the helper answers with `result`. A
 call past its deadline is answered with an error for the caller and `{"call": "c4", "cancel": true}` is sent; a late
 `result` is `bad_request`. At most 16 calls wait per helper.
+
+### browse
+
+`browse` runs Ardia's own automation stack, never a second one: the installed `ardia` command
+(`<CLI home>/current/bin/ardia`, what Settings › Advanced installs) with `ardia browse --session plugin-<name>`, first
+`tab <targetId>` (the tab's DevTools page, from the engine's `cliTabTargets`, so it acts on exactly that tab, as the
+user's borrowed tab: it reads, clicks and types there but never navigates it) and then the command. Ardia runs it, not
+the helper: the sandbox keeps the helper away from `ArdiaControl.json` and the token. Rules:
+
+- `tab` is an open http or https tab: never private or incognito, Peek, one of Ardia's pages or a plugin page.
+- `argv[0]` is `snapshot`, `get`, `click`, `fill`, `type`, `press`, `scroll`, `wait`, `find` or `is`; 1 to 64
+  arguments of up to 8,192 characters. Flags that pick another session, endpoint, data folder or file (`--session`,
+  `--ws`, `--data-dir`, `--out`, `--init-script`, `--show`, …) are `bad_request`.
+- One command at a time per plugin, 60 s for both steps together; the text answer (stdout) is cut at 64 KB. The
+  process runs with a clean environment (`ARDIA_DATA_DIR` this instance's, `ARDIA_TELEMETRY=0`, so plugin use isn't
+  counted as the user's CLI use).
+- A missing `ardia` command, a tab whose page is asleep, a timeout or the command's own failure come back as
+  `{"ok": false, "error"}` with the reason.
+
+**The token server.** `ardia browse` reaches Ardia through the engine's DevTools token server (`ac_cli_control`,
+`ArdiaControl.json`), which "Let the ardia command control Ardia" turns on. When that setting is on, `browse` uses it.
+When it's off, Ardia starts the token server for the plugin as a lease (`state/plugins/browseServer.ts`), without
+turning the setting on and without the control socket: it starts on the first `browse` call, stays while calls run
+and for 60 s after the last one, then stops (unless you turned the setting on meanwhile). The engine has one token
+server, so while the lease holds, a local program that can read Ardia's data folder could reach it too, exactly as when
+the setting is on; that is the cost of not writing a second automation path. The "ardia is controlling Ardia" pill
+shows while the plugin's session is connected, and its Stop ends the lease at once (turning the setting off does
+too); the plugin's next `browse` starts a new one.
 
 ## The page
 
@@ -304,20 +341,24 @@ The control socket's protocol 4 adds `plugins`, `plugins.enable` (`{"waiting": t
 
 - `lib/pluginManifest.ts`: parsing, migration, checks and the schema (`lib/pluginProcess.ts` for `process` and its `access` grants); `lib/pluginManifest.test.mjs`.
 - `state/plugins/`: the registry (`store.ts`), saved state (`savedState.ts`), turning on and off (`lifecycle.ts`),
-  settings defaults (`defaults.ts`), the helper channel (`channel.ts`, `channelMethods.ts`), tools (`tools.ts`),
+  settings defaults (`defaults.ts`), the helper channel (`channel.ts`, `channelMethods.ts`; `arrange.ts` for workspace, apply and groups, `browse.ts` and `browseServer.ts`, `banners.ts`), tools (`tools.ts`),
   command bar entries (`commands.ts`), page tabs (`pages.ts`, `pageNames.ts`), consent copy (`consent.ts`), socket methods
   (`socketMethods.ts`).
 - `platform/plugins.ts` binds `ArdiaPlugins` (`packages/shell/ios/PluginsModule.swift`, `PluginFolder.swift`,
   `PluginProcess.swift`, `PluginCore/PluginSandbox.swift` (tested by `packages/shell/plugin-tests`, run by `swift test` in `packages/shell`), `PluginPageView.swift`, `PluginSchemeHandler.swift`).
-- UI: `components/settings/panes/Plugins.tsx`, `components/plugins/PluginPage.tsx` (rendered by `components/pages/InternalPage.tsx`).
+- UI: `components/settings/panes/Plugins.tsx`, `components/plugins/PluginPage.tsx` (rendered by `components/pages/InternalPage.tsx`), `components/plugins/PluginBanner.tsx` (in `TabPane`, under the share bar).
 - The example plugin used by the tests: `tests/fixtures/plugins/example/`.
 
 ## Telemetry
 
 Counts only, never plugin names, titles, URLs, row values, tool input or output:
 `usage_counts.plugin_enables`, `plugin_disables`, `plugin_process_starts`, `plugin_process_crashes`,
-`plugin_commands_run`, `plugin_tool_calls`, `plugin_tool_failures`, `plugin_page_opens`, `plugin_split_opens`; the daily settings snapshot's
+`plugin_commands_run`, `plugin_tool_calls`, `plugin_tool_failures`, `plugin_page_opens`, `plugin_split_opens`,
+`plugin_arrange_calls`, `plugin_arrange_failures` (`apply`, `group.withPage`, `split.toGroup`), `plugin_browse_calls`,
+`plugin_browse_failures`, `plugin_browse_leases` (token server started only for a plugin), `plugin_banners_shown`,
+`plugin_banner_stops`, `plugin_values_set`; the daily settings snapshot's
 `plugins_installed`, `plugins_enabled` and, among those on, how many use each contribution:
 `plugins_with_settings`, `plugins_with_commands`, `plugins_with_page`, `plugins_with_process`,
 `plugins_with_hooks`, `plugins_with_tools`. Dashboard: watch `plugin_process_crashes` against
-`plugin_process_starts`.
+`plugin_process_starts`, `plugin_browse_failures` against `plugin_browse_calls`, and `plugin_arrange_failures`
+against `plugin_arrange_calls`.

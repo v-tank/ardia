@@ -8,7 +8,7 @@ export { isPluginPath, type AccessGrant, type ProcessSpec } from "./pluginProces
 export const MANIFEST_VERSION = 1;
 export const MANIFEST_FILE = "plugin.json";
 
-export const PLUGIN_PERMISSIONS = ["tabs", "fullUrls", "commands", "network"] as const;
+export const PLUGIN_PERMISSIONS = ["tabs", "fullUrls", "commands", "network", "arrange", "pages"] as const;
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number];
 
 export const ROW_TYPES = ["toggle", "text", "choice"] as const;
@@ -265,7 +265,7 @@ function permissionsOf(c: Check, value: unknown): PluginPermission[] {
       if (!out.includes(p as PluginPermission)) out.push(p as PluginPermission);
     } else c.problems.push(`permissions has ${JSON.stringify(p)}, which isn't one of ${PLUGIN_PERMISSIONS.join(", ")}`);
   }
-  if (out.includes("fullUrls") && !out.includes("tabs")) c.problems.push("permissions: fullUrls needs tabs");
+  for (const needs of ["fullUrls", "arrange", "pages"] as const) if (out.includes(needs) && !out.includes("tabs")) c.problems.push(`permissions: ${needs} needs tabs`);
   return out;
 }
 

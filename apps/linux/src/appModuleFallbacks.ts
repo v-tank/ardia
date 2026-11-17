@@ -85,6 +85,7 @@ const MODULE_FALLBACKS: Record<string, Record<string, Fallback>> = {
     event: now(undefined),
     call: now(undefined),
     remove: answer({ ok: false, reason: "plugins aren't available on Linux yet" }),
+    browse: answer({ ok: false, reason: "plugins aren't available on Linux yet" }),
     revealLog: now(undefined),
     revealFolder: now(undefined),
     devSnapshotPage: answer(false),

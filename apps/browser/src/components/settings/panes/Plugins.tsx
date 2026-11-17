@@ -114,7 +114,7 @@ function PluginRow({ name }: { name: string }) {
 function ValueRow({ name, row, value }: { name: string; row: RowSpec; value: string | boolean }) {
   const [draft, setDraft] = useState(typeof value === "string" ? value : "");
   useEffect(() => setDraft(typeof value === "string" ? value : ""), [value]);
-  if (row.type === "toggle") return <Row title={row.title} description={row.description}><Toggle value={value === true} accessibilityLabel={row.title} onChange={(on) => setPluginValue(name, row.key, on)} /></Row>;
+  if (row.type === "toggle") return <Row title={row.title} description={row.description}><Toggle value={value === true} accessibilityLabel={row.title} onChange={(on) => void setPluginValue(name, row.key, on)} /></Row>;
   if (row.type === "choice")
     return (
       <Row title={row.title} description={row.description}>

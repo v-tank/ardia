@@ -16,6 +16,8 @@ import { answerCall, callTool, dropCalls } from "./tools";
 import { acceptsRun, onProcessStopped, processExited } from "./process";
 import { isLoopbackPageUrl } from "./pageUrls";
 import { valuesFor } from "./values";
+import { answerPluginMethod } from "./channelMethods";
+import { startBanners } from "./banners";
 
 export const CHANNEL_PROTOCOL = 1;
 
@@ -110,7 +112,7 @@ function answer(c: Connection, m: PluginManifest, method: string, params: Record
       return problem ? failure("bad_request", problem) : { result: { ok: true } };
     }
   }
-  return failure("unknown_method", `There's no method ${method}.`);
+  return answerPluginMethod(c.name, m, method, params) ?? failure("unknown_method", `There's no method ${method}.`);
 }
 
 function reply(c: Connection, id: RequestId, body: Body) {
@@ -186,6 +188,7 @@ export function startChannels() {
     }
   });
   onPluginExit(processExited);
+  startBanners();
   onProcessStopped(dropConnections);
   onProcessStopped(dropCalls);
   setFeedConsumer("plugins", { subscriptions: () => [...connections.values()].flatMap((c) => (c.sub ? [c.sub] : [])), deliver });

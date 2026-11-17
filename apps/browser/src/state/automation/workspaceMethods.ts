@@ -56,7 +56,9 @@ function settledState(ops: Op[], results: OpResult[]): Pick<ApplyResult, "tabs" 
 
 let chain: Promise<unknown> = Promise.resolve();
 
-async function runAll(ops: Op[], stillOn: () => boolean): Promise<ApplyResult> {
+export type EditCounter = (tabEdits: number, groupEdits: number, failures: number) => void;
+
+async function runAll(ops: Op[], stillOn: () => boolean, note: EditCounter): Promise<ApplyResult> {
   const results: OpResult[] = [];
   let error: ApplyResult["error"];
   for (const [index, op] of ops.entries()) {
@@ -74,7 +76,7 @@ async function runAll(ops: Op[], stillOn: () => boolean): Promise<ApplyResult> {
     }
   }
   const applied = ops.slice(0, results.length);
-  noteCliEdits(applied.filter((op) => !op.op.startsWith("group.")).length, applied.filter((op) => op.op.startsWith("group.")).length, error ? 1 : 0);
+  note(applied.filter((op) => !op.op.startsWith("group.")).length, applied.filter((op) => op.op.startsWith("group.")).length, error ? 1 : 0);
   return {
     ok: !error,
     applied: results.length,
@@ -84,15 +86,15 @@ async function runAll(ops: Op[], stillOn: () => boolean): Promise<ApplyResult> {
   };
 }
 
-export function applyMethod(params: Record<string, unknown>, stillOn: () => boolean): Body | Promise<Body> {
+export function applyMethod(params: Record<string, unknown>, stillOn: () => boolean, note: EditCounter = noteCliEdits): Body | Promise<Body> {
   const unknown = Object.keys(params).filter((key) => key !== "ops");
   if (unknown.length) return failure("bad_request", `apply takes ops, not ${unknown.join(", ")}.`);
   const ops = parseOps(params.ops);
   if (!Array.isArray(ops)) {
-    noteCliEdits(0, 0, 1);
+    note(0, 0, 1);
     return failure(ops.code, ops.message);
   }
-  const run = chain.then(() => runAll(ops, stillOn));
+  const run = chain.then(() => runAll(ops, stillOn, note));
   chain = run.catch(() => {});
   return run.then((result) => ({ result }));
 }

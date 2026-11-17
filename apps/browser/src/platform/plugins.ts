@@ -1,6 +1,6 @@
-import { nativeModule, type PluginExit, type PluginFolderEntry, type PluginLine, type PluginRemoveResult, type PluginStartResult, type PluginStartSpec } from "@ardia/shell";
+import { nativeModule, type PluginBrowseRun, type PluginExit, type PluginFolderEntry, type PluginLine, type PluginRemoveResult, type PluginStartResult, type PluginStartSpec } from "@ardia/shell";
 
-export type { PluginExit, PluginFolderEntry, PluginLine, PluginRemoveResult, PluginStartResult, PluginStartSpec };
+export type { PluginBrowseRun, PluginExit, PluginFolderEntry, PluginLine, PluginRemoveResult, PluginStartResult, PluginStartSpec };
 
 let bound: ReturnType<typeof nativeModule<"ArdiaPlugins">> | null = null;
 const Plugins = () => (bound ??= nativeModule("ArdiaPlugins"));
@@ -13,6 +13,7 @@ export const replyToPlugin = (name: string, run: number, line: string) => Plugin
 export const sendToPlugin = (name: string, run: number, line: string) => Plugins().event(name, run, line);
 export const callPlugin = (name: string, run: number, line: string) => Plugins().call(name, run, line);
 export const removePluginFiles = (name: string) => Plugins().remove(name);
+export const runPluginBrowse = (name: string, argv: string[], timeoutMs: number) => Plugins().browse(name, argv, timeoutMs);
 export const revealPluginLog = (name: string) => Plugins().revealLog(name);
 export const revealPluginsFolder = () => Plugins().revealFolder();
 export const devSnapshotPluginPage = (name: string, path: string) => Plugins().devSnapshotPage(name, path);

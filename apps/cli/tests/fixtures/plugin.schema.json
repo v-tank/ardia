@@ -37,13 +37,15 @@
     },
     "permissions": {
       "type": "array",
-      "maxItems": 4,
+      "maxItems": 6,
       "items": {
         "enum": [
           "tabs",
           "fullUrls",
           "commands",
-          "network"
+          "network",
+          "arrange",
+          "pages"
         ]
       }
     },

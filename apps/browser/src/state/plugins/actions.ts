@@ -9,3 +9,4 @@ export { consentLines, type ConsentLine } from "./consent";
 export const showPluginLog = (name: string) => revealPluginLog(name);
 export const showPluginsFolder = () => revealPluginsFolder();
 export const pluginsFolderPath = () => (PLATFORM_FEATURES.plugins ? pluginsFolder() : "");
+export { pressBannerStop } from "./banners";

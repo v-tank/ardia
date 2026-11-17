@@ -199,7 +199,19 @@ export function noteTabReady(tabId: string) {
   pushActiveTab();
 }
 
-export const stopCliControl = () => useBrowser.getState().updateSettings({ cliControl: false });
+const stopListeners = new Set<() => void>();
+
+export const onCliControlStopped = (listener: () => void) => {
+  stopListeners.add(listener);
+  return () => void stopListeners.delete(listener);
+};
+
+export function stopCliControl() {
+  const { settings, updateSettings } = useBrowser.getState();
+  if (settings.cliControl) updateSettings({ cliControl: false });
+  else void setCliControl(false).catch(() => {});
+  for (const listener of stopListeners) listener();
+}
 
 function neverInstalled(record: Saved) {
   return !record.autoInstalledAt && !record.autoInstallTries && !record.version && !record.binPath;

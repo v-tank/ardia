@@ -11,6 +11,14 @@ const NONE = {
   plugin_tool_failures: 0,
   plugin_page_opens: 0,
   plugin_split_opens: 0,
+  plugin_arrange_calls: 0,
+  plugin_arrange_failures: 0,
+  plugin_browse_calls: 0,
+  plugin_browse_failures: 0,
+  plugin_browse_leases: 0,
+  plugin_banners_shown: 0,
+  plugin_banner_stops: 0,
+  plugin_values_set: 0,
 };
 
 export type PluginCount = keyof typeof NONE;
