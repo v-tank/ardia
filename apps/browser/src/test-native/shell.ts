@@ -415,7 +415,7 @@ const systemSignalsModule: Modules["ArdiaSystemSignals"] = {
 
 export const pluginHost = {
   folders: [] as { name: string; status: "ok" | "missing" | "notFile" | "tooBig" | "unreadable"; text?: string; folderId?: string }[],
-  starts: [] as { name: string; run: string[]; memoryMB: number; network: boolean }[],
+  starts: [] as { name: string; run: string[]; memoryMB: number; network: boolean; access: { path: string; write: boolean }[]; userHome: boolean }[],
   stops: [] as { name: string; run: number; graceMs: number }[],
   replies: [] as { name: string; run: number; line: string }[],
   events: [] as { name: string; run: number; line: string }[],
@@ -430,7 +430,7 @@ const plugins: Modules["ArdiaPlugins"] = {
   folder: () => "/config/plugins",
   list: async () => pluginHost.folders.map((f) => ({ ...f })),
   start: async (spec) => {
-    pluginHost.starts.push({ ...spec, run: [...spec.run] });
+    pluginHost.starts.push({ ...spec, run: [...spec.run], access: spec.access.map((g) => ({ ...g })) });
     if (pluginHost.startResult) return pluginHost.startResult;
     return { ok: true, run: ++pluginHost.nextRun, pid: 1000 + pluginHost.nextRun };
   },

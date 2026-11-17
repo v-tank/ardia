@@ -25,6 +25,8 @@ final class PluginProcess {
     let run: [String]
     let memoryMB: Int
     let network: Bool
+    var access: [(path: String, write: Bool)] = []
+    var userHome = false
   }
 
   enum Failure: Error {
@@ -56,13 +58,14 @@ final class PluginProcess {
     return open(path, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC | O_NOFOLLOW, 0o600)
   }
 
-  static func environment(name: String, data: String) -> [String] {
+  static func environment(name: String, data: String, home: String? = nil) -> [String] {
     [
       "PATH=" + PluginSandbox.searchPath.joined(separator: ":"),
-      "HOME=" + (data as NSString).appendingPathComponent("home"),
+      "HOME=" + (home ?? (data as NSString).appendingPathComponent("home")),
       "TMPDIR=" + (data as NSString).appendingPathComponent("tmp") + "/",
       "LANG=en_US.UTF-8",
       "ARDIA_PLUGIN_NAME=" + name,
+      "ARDIA_PLUGIN_DATA=" + data,
       "ARDIA_PLUGIN_FD=\(channelFd)",
       "ARDIA_PLUGIN_PROTOCOL=1",
     ]
@@ -77,9 +80,14 @@ final class PluginProcess {
     guard let first = spec.run.first, let program = PluginSandbox.program(first, pluginFolder: pluginFolder) else {
       return .failure(.refused("\(spec.run.first ?? "") wasn't found"))
     }
-    let sandbox = PluginSandbox(
-      home: PluginSandbox.resolved(NSHomeDirectory()) ?? NSHomeDirectory(), appData: folders.appData, configFolder: folders.config,
+    let home = PluginSandbox.resolved(NSHomeDirectory()) ?? NSHomeDirectory()
+    var sandbox = PluginSandbox(
+      home: home, appData: folders.appData, configFolder: folders.config,
       pluginFolder: pluginFolder, pluginData: data, program: program, network: spec.network)
+    for given in spec.access {
+      guard let grant = PluginSandbox.grant(given.path, write: given.write, home: home) else { return .failure(.refused("\(given.path) isn't a path in your home folder")) }
+      sandbox.grants.append(grant)
+    }
     let sandboxArguments: [String]
     do {
       sandboxArguments = try sandbox.arguments()
@@ -122,7 +130,7 @@ final class PluginProcess {
     posix_spawnattr_setpgroup(&attributes, 0)
     posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF))
     let argv = ["/usr/bin/sandbox-exec"] + sandboxArguments + [program] + spec.run.dropFirst()
-    let env = environment(name: spec.name, data: data)
+    let env = environment(name: spec.name, data: data, home: spec.userHome ? home : nil)
     var pid: pid_t = 0
     let result = withCStrings(argv) { cArgv in withCStrings(env) { cEnv in posix_spawn(&pid, "/usr/bin/sandbox-exec", &actions, &attributes, cArgv, cEnv) } }
     guard result == 0 else {

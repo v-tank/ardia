@@ -16,7 +16,7 @@ test("the example plugin reads with every contribution", () => {
   assert.deepEqual(manifest.page.source, { file: "page/index.html" });
   assert.deepEqual(manifest.commands.find((c) => c.name === "beside").action, { open: "split", context: true, side: "right", sideSetting: "side", path: "" });
   assert.ok(problems({ ...base(), commands: [{ name: "h", title: "History", open: "tab", path: "/../up" }] }).some((p) => p.includes("path must be")));
-  assert.deepEqual(manifest.process, { run: ["/usr/bin/python3", "helper.py"], memoryMB: 256 });
+  assert.deepEqual(manifest.process, { run: ["/usr/bin/python3", "helper.py"], memoryMB: 256, access: [], userHome: false });
   assert.equal(manifest.tools.find((t) => t.name === "hello").timeout, 5);
 });
 
@@ -124,4 +124,32 @@ test("the CLI's plugin schema fixture is what the app writes", async () => {
   const { pluginSchemaJson } = await import("./pluginSchema.ts");
   const fixture = readFileSync(new URL("../../../cli/tests/fixtures/plugin.schema.json", import.meta.url), "utf8");
   assert.equal(pluginSchemaJson(PLUGIN_EVENTS), fixture, "regenerate apps/cli/tests/fixtures/plugin.schema.json");
+});
+
+test("process.access grants home paths to read or write, and refuses the home folder, Ardia's data and browser profiles", () => {
+  const withAccess = (access, extra = {}) => ({ ...base(), process: { run: ["/usr/bin/python3", "helper.py"], access, ...extra } });
+  const { manifest } = readManifest(JSON.stringify(withAccess([{ path: "~/.claude/", write: true }, { path: "~/.local/share/claude" }], { userHome: true })));
+  assert.deepEqual(manifest.process.access, [{ path: "~/.claude", write: true }, { path: "~/.local/share/claude", write: false }]);
+  assert.equal(manifest.process.userHome, true);
+  const refused = {
+    "~": "must start with ~/",
+    "~/": "whole home folder",
+    "/etc": "must start with ~/",
+    "~/a/../b": "can't have",
+    "~/a//b": "can't have",
+    "~/Library": "takes in ~/Library/Application Support/com.ardia.browser",
+    "~/Library/Application Support": "takes in",
+    "~/library/application support/google/Default": "takes in ~/Library/Application Support/Google",
+    "~/.config": "takes in ~/.config/ardia",
+    "~/.config/ardia/plugins": "takes in ~/.config/ardia",
+    "~/Library/Safari/History.db": "takes in ~/Library/Safari",
+  };
+  for (const [path, words] of Object.entries(refused)) {
+    const found = problems(withAccess([{ path }]));
+    assert.ok(found.some((p) => p.includes("process.access[0].path") && p.includes(words)), `${path}: ${found.join("; ")}`);
+  }
+  assert.ok(problems(withAccess(Array.from({ length: 17 }, (_, i) => ({ path: `~/.t${i}` })))).some((p) => p.includes("at most 16")));
+  assert.ok(problems(withAccess([{ path: "~/.a", mode: "rw" }])).some((p) => p.includes("mode isn't a key")));
+  assert.ok(problems(withAccess([{ path: "~/.a" }, { path: "~/.a/" }])).some((p) => p.includes("twice")));
+  assert.ok(problems(withAccess([], { userHome: "yes" })).some((p) => p.includes("userHome must be true or false")));
 });

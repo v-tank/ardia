@@ -67,7 +67,20 @@ public class PluginsModule: Module {
       promise.reject("ERR_BAD_ARGS", "start needs name, run, memoryMB and network")
       return
     }
-    let process = PluginProcess.Spec(name: name, run: run, memoryMB: memoryMB, network: network)
+    var process = PluginProcess.Spec(name: name, run: run, memoryMB: memoryMB, network: network)
+    let access = spec["access"] as? [[String: Any]] ?? []
+    guard access.count <= PluginSandbox.maxGrants else {
+      promise.reject("ERR_BAD_ARGS", "start takes at most \(PluginSandbox.maxGrants) access grants")
+      return
+    }
+    for grant in access {
+      guard let path = grant["path"] as? String else {
+        promise.reject("ERR_BAD_ARGS", "an access grant needs a path")
+        return
+      }
+      process.access.append((path: path, write: grant["write"] as? Bool ?? false))
+    }
+    process.userHome = spec["userHome"] as? Bool ?? false
     PluginHost.shared.start(process) { reply in promise.resolve(reply) }
   }
 

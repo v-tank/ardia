@@ -66,6 +66,13 @@ export function pluginSchema(eventNames: readonly string[]): Record<string, unkn
         {
           run: { type: "array", minItems: 1, maxItems: LIMITS.argv, items: { type: "string", pattern: "^[^\\u0000]{1,1024}$" } },
           memoryMB: { type: "integer", minimum: LIMITS.memoryMB[0], maximum: LIMITS.memoryMB[1], default: 1024 },
+          access: {
+            type: "array",
+            maxItems: LIMITS.access,
+            description: "Folders or files in your home the helper may read (and run), or also write",
+            items: closed({ path: { type: "string", pattern: "^~/[^\\u0000]{1,1022}$" }, write: { type: "boolean", default: false } }, ["path"]),
+          },
+          userHome: { type: "boolean", default: false, description: "The helper's HOME is your home folder instead of its own" },
         },
         ["run"],
       ),

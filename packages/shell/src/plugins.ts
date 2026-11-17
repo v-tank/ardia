@@ -8,7 +8,7 @@ export type PluginFolderEntry = {
   folderId?: string;
 };
 
-export type PluginStartSpec = { name: string; run: string[]; memoryMB: number; network: boolean };
+export type PluginStartSpec = { name: string; run: string[]; memoryMB: number; network: boolean; access: { path: string; write: boolean }[]; userHome: boolean };
 export type PluginStartResult = { ok: true; run: number; pid: number } | { ok: false; reason: string };
 export type PluginExit = { name: string; run: number; status: number | null; signal: number | null; overMemory: boolean };
 export type PluginLine = { name: string; run: number; line: string };

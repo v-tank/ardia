@@ -129,6 +129,19 @@ never sent to Chrome. A plugin with a page can't take the name of one of Ardia's
 At most 32 items, each up to 1,024 bytes, no NUL. `memoryMB` (64 to 4,096, default 1,024) caps its memory. See
 [The helper](#the-helper).
 
+`access` (at most 16) opens folders or files in your home to the helper, which the sandbox otherwise keeps it out of:
+`[{"path": "~/.claude", "write": true}, {"path": "~/.local/share/claude"}]`. A `path` starts with `~/` and has no
+empty, `.` or `..` parts; a grant reads (and runs the programs in) that path and everything under it, and `"write": true`
+also writes there. The folder doesn't have to exist yet. A grant that is your home folder, or that is inside or takes
+in Ardia's data folder, its config folder or another browser's profiles (`~/Library/Application Support/Google`,
+`Arc`, `Dia`, `BraveSoftware`, `Firefox`, … `~/Library/Safari`, `~/Library/Cookies`, `~/Library/Keychains`; the list
+is `PROTECTED_HOME_PATHS` in `lib/pluginProcess.ts` and `protectedInHome` in `PluginCore/PluginSandbox.swift`) is a manifest
+problem, compared without case. Ardia checks again when it starts the helper, after following links, against the
+folders this instance really uses (a scratch data folder included), and a grant that leads outside your home or into
+one of those folders keeps the helper from starting. `userHome: true` makes the helper's `HOME` your home folder
+instead of its own, for programs that look for their files under `~`; it reaches only what `access` grants. Both exist
+so a plugin can run a provider's command line program with the login it already has, without a private hook.
+
 ### hooks
 
 Events from Ardia's automation event table (`docs/automation.md` › Events) delivered to the helper while it subscribes
@@ -159,7 +172,8 @@ named Ardia settings, offering tools.
 
 A plugin you install is off. Turning it on in Settings › Plugins shows what it gets, in words built from the
 manifest ("Runs a program in the background: /usr/bin/python3 helper.py", "Sees the address and title of your tabs",
-"Runs Ardia commands", "Connects to the internet", "Changes these settings: commandBarStart", "Adds a page you open as a tab", …). Turn On approves that exact manifest in that exact folder: Ardia keeps the SHA-256 of the manifest's text and the
+"Runs Ardia commands", "Connects to the internet", "Reads and writes ~/.claude", "Reads ~/.local/share/claude",
+"Changes these settings: commandBarStart", "Adds a page you open as a tab", …). Turn On approves that exact manifest in that exact folder: Ardia keeps the SHA-256 of the manifest's text and the
 plugin folder's identity on disk (device and inode, after links) in `plugins.json`.
 
 - **A changed manifest needs a new approval.** If `plugin.json` changes while the plugin is on, the plugin stops (its
@@ -195,14 +209,22 @@ plugin folder's identity on disk (device and inode, after links) in `plugins.jso
   never written into the profile's text. It inherits nothing from Ardia but stdin (`/dev/null`), stdout and stderr (its
   log, `PluginData/<name>/plugin.log`, 0600, moved to `plugin.log.1` at start past 1 MB and emptied while it runs past
   2 MB) and the channel on descriptor 3; both ends of the channel are close-on-exec from the moment they exist. Its
-  environment is only `PATH` (above), `HOME` (`PluginData/<name>/home`), `TMPDIR` (`PluginData/<name>/tmp`), `LANG`,
-  `ARDIA_PLUGIN_NAME`, `ARDIA_PLUGIN_FD=3` and `ARDIA_PLUGIN_PROTOCOL=1`. A sandbox Ardia can't set up means the helper
+  environment is only `PATH` (above), `HOME` (`PluginData/<name>/home`, or your home with `userHome`), `TMPDIR`
+  (`PluginData/<name>/tmp`, always), `LANG`, `ARDIA_PLUGIN_NAME`, `ARDIA_PLUGIN_DATA` (`PluginData/<name>`),
+  `ARDIA_PLUGIN_FD=3` and `ARDIA_PLUGIN_PROTOCOL=1`. A sandbox Ardia can't set up means the helper
   doesn't start; it never runs unsandboxed.
 - **Sandbox.** It may read and write its `PluginData` folder and read the plugin's folder, the program it runs and that
   program's install folder (the folder above the `bin` it is in, so `/opt/homebrew/opt/node/bin/node` reads its own
   libraries; `/bin/sh` or `~/bin/x` read only themselves, since that folder would be `/` or your home). Your home
   folder, Ardia's data folder and its config folder are unreadable and unwritable, wherever they are (a scratch data
-  folder outside your home included): your files, every browser profile, cookies, passwords and Ardia's own state. It
+  folder outside your home included): your files, every browser profile, cookies, passwords and Ardia's own state.
+  The paths `access` grants are the exception: each is a `-D` parameter (`GRANT_<n>`, never written into the
+  profile's text) with `file-read*` and `process-exec*` allowed under it, `file-write*` too for a write grant, and
+  `file-read-metadata` on each folder between your home and it (and on the link, when the grant is one) so paths
+  resolve. The rules come after the profile's denials, so they win only for those paths; the denials for Ardia's
+  data and config folders never overlap a grant, since such a grant is refused. Connecting to a Unix socket in your
+  home stays denied, granted or not. `PluginSandboxGrantTests.swift` (in `packages/shell/plugin-tests`) runs a shell
+  through the real profile with grants in a scratch home: it reads, runs and writes what's granted and nothing beside it. It
   can't connect to a Unix socket in your home or Ardia's data folder, so Ardia's control socket is out of reach. It
   can't write anywhere else on disk. Without `network` its outbound connections reach only this Mac. A plugin whose
   folder (after links) would take in your home, Ardia's data or its settings, or whose program lives in Ardia's data or
@@ -280,7 +302,7 @@ The control socket's protocol 4 adds `plugins`, `plugins.enable` (`{"waiting": t
 
 ## Code
 
-- `lib/pluginManifest.ts`: parsing, migration, checks and the schema; `lib/pluginManifest.test.mjs`.
+- `lib/pluginManifest.ts`: parsing, migration, checks and the schema (`lib/pluginProcess.ts` for `process` and its `access` grants); `lib/pluginManifest.test.mjs`.
 - `state/plugins/`: the registry (`store.ts`), saved state (`savedState.ts`), turning on and off (`lifecycle.ts`),
   settings defaults (`defaults.ts`), the helper channel (`channel.ts`, `channelMethods.ts`), tools (`tools.ts`),
   command bar entries (`commands.ts`), page tabs (`pages.ts`, `pageNames.ts`), consent copy (`consent.ts`), socket methods

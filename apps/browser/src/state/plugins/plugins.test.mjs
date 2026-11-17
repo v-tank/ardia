@@ -78,7 +78,7 @@ test("an installed plugin stays off until its consent is accepted, then starts i
   assert.equal(lifecycle.enablePlugin("example", "0".repeat(64)), false, "a stale hash never turns it on");
   const run = await enabled();
   assert.ok(run > 0);
-  assert.deepEqual(host.starts.at(-1), { name: "example", run: ["/usr/bin/python3", "helper.py"], memoryMB: 256, network: false });
+  assert.deepEqual(host.starts.at(-1), { name: "example", run: ["/usr/bin/python3", "helper.py"], memoryMB: 256, network: false, access: [], userHome: false });
   assert.equal(P().processes.example.state, "running");
   const counts = takePluginCounts();
   assert.equal(counts.plugin_enables, 1);
@@ -88,6 +88,16 @@ test("an installed plugin stays off until its consent is accepted, then starts i
 test("the consent sheet names every reach the plugin gets", () => {
   const lines = consentLines(P().listings.example.manifest).map((l) => l.text).join("\n");
   for (const words of ["/usr/bin/python3 helper.py", "can't connect beyond", "title of your tabs", "tab.activated", "Runs Ardia commands", "commandBarStart", "ardia://example", "handed the tab you're on", "Say Hello", "Offers tools"]) assert.ok(lines.includes(words), words);
+});
+
+test("the consent sheet lists each home path a helper may read or write, and a shared home", () => {
+  const doc = JSON.parse(FIXTURE);
+  doc.process.access = [{ path: "~/.claude", write: true }, { path: "~/.local/share/claude" }];
+  doc.process.userHome = true;
+  const lines = consentLines(lifecycle.listingsOf([{ name: "example", status: "ok", text: JSON.stringify(doc) }])[0].manifest).map((l) => l.text);
+  assert.ok(lines.includes("Reads and writes ~/.claude"));
+  assert.ok(lines.includes("Reads ~/.local/share/claude"));
+  assert.ok(lines.some((l) => l.startsWith("That program sees your home folder as its home")));
 });
 
 test("settings defaults apply on enable and go back on disable, unless changed since", async () => {

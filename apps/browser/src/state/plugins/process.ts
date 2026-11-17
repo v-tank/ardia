@@ -46,7 +46,7 @@ async function launch(name: string, entry: Supervised) {
   const m = entry.manifest;
   let started: Awaited<ReturnType<typeof startPluginProcess>>;
   try {
-    started = await startPluginProcess({ name, run: m.process!.run, memoryMB: m.process!.memoryMB, network: m.permissions.includes("network") });
+    started = await startPluginProcess({ name, run: m.process!.run, memoryMB: m.process!.memoryMB, network: m.permissions.includes("network"), access: m.process!.access, userHome: m.process!.userHome });
   } catch (error) {
     started = { ok: false, reason: String(error) };
   }

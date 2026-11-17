@@ -165,6 +165,33 @@
           "minimum": 64,
           "maximum": 4096,
           "default": 1024
+        },
+        "access": {
+          "type": "array",
+          "maxItems": 16,
+          "description": "Folders or files in your home the helper may read (and run), or also write",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^~/[^\\u0000]{1,1022}$"
+              },
+              "write": {
+                "type": "boolean",
+                "default": false
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "path"
+            ]
+          }
+        },
+        "userHome": {
+          "type": "boolean",
+          "default": false,
+          "description": "The helper's HOME is your home folder instead of its own"
         }
       },
       "additionalProperties": false,

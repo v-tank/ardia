@@ -1,6 +1,9 @@
 import { isFields, type Fields } from "./decode";
 import { upgraded, type Migrations } from "./savedDocument";
 import { isPagePath, RESERVED_PAGE_NAMES } from "./pluginNames";
+import { isPluginPath, processOf, PROCESS_LIMITS, type ProcessSpec } from "./pluginProcess";
+
+export { isPluginPath, type AccessGrant, type ProcessSpec } from "./pluginProcess";
 
 export const MANIFEST_VERSION = 1;
 export const MANIFEST_FILE = "plugin.json";
@@ -24,9 +27,7 @@ export const LIMITS = {
   keyword: 40,
   tools: 32,
   toolTimeout: [1, 300],
-  argv: 32,
-  argBytes: 1024,
-  memoryMB: [64, 4096],
+  ...PROCESS_LIMITS,
 } as const;
 
 export const NAME_PATTERN = "^[a-z0-9][a-z0-9-]{0,39}$";
@@ -53,7 +54,6 @@ export type CommandAction =
 export type CommandSpec = { name: string; title: string; icon: string; keywords: string[]; action: CommandAction };
 export type ToolSpec = { name: string; title: string; description: string; timeout: number };
 export type PageSpec = { title: string; icon: string; source: { file: string } | { served: true } };
-export type ProcessSpec = { run: string[]; memoryMB: number };
 
 export type PluginManifest = {
   manifest: number;
@@ -236,11 +236,6 @@ function tool(c: Check, path: string, value: unknown): ToolSpec | null {
   return name && title ? { name, title, description, timeout } : null;
 }
 
-export function isPluginPath(value: string): boolean {
-  if (!value || value.length > LIMITS.argBytes || value.startsWith("/") || value.includes("\\") || value.includes("\0")) return false;
-  return value.split("/").every((part) => part !== "" && part !== "." && part !== "..");
-}
-
 function pageOf(c: Check, value: unknown): PageSpec | null {
   if (value === undefined) return null;
   const doc = object(c, "page", value);
@@ -260,27 +255,6 @@ function pageOf(c: Check, value: unknown): PageSpec | null {
   }
   if (!title) return null;
   return { title, icon, source: hasFile ? { file: doc.file as string } : { served: true } };
-}
-
-function processOf(c: Check, value: unknown): ProcessSpec | null {
-  if (value === undefined) return null;
-  const doc = object(c, "process", value);
-  if (!doc) return null;
-  only(c, "process", doc, ["run", "memoryMB"]);
-  const run = doc.run;
-  const okArgs =
-    Array.isArray(run) &&
-    run.length > 0 &&
-    run.length <= LIMITS.argv &&
-    run.every((arg) => typeof arg === "string" && arg.length > 0 && new TextEncoder().encode(arg).length <= LIMITS.argBytes && !arg.includes("\0"));
-  if (!okArgs) {
-    c.problems.push(`process.run must be a list of 1 to ${LIMITS.argv} arguments, the program first`);
-    return null;
-  }
-  const program = run[0] as string;
-  if (!program.startsWith("/") && program.includes("/") && !isPluginPath(program)) c.problems.push("process.run[0] must be a file in the plugin's folder, an absolute path or a program name");
-  const memoryMB = integer(c, "process.memoryMB", doc.memoryMB, LIMITS.memoryMB, 1024);
-  return { run: run as string[], memoryMB };
 }
 
 function permissionsOf(c: Check, value: unknown): PluginPermission[] {
@@ -312,7 +286,7 @@ export function checkManifest(raw: Fields): { manifest: PluginManifest | null; p
   const commands = list(c, "commands", raw.commands, LIMITS.commands).flatMap((x, i) => command(c, at("commands", i), x) ?? []);
   unique(c, "commands", commands.map((x) => x.name), "commands");
   const page = pageOf(c, raw.page);
-  const process = processOf(c, raw.process);
+  const process = processOf(c.problems, raw.process);
   const hooks = list(c, "hooks", raw.hooks, 64).flatMap((h, i) => (typeof h === "string" && h ? [h] : (c.problems.push(`${at("hooks", i)} must be an event name`), [])));
   commands.forEach((x, i) => {
     const action = x.action;
