@@ -3,6 +3,7 @@ import { useWindow, useWindowId } from "../../state/browser/hooks";
 import { tourAnchorRef } from "../onboarding/tour/anchors";
 import { CheckInBanner } from "./CheckInBanner";
 import { PersonalizeButton } from "./Personalize";
+import { NewTabPluginButtons } from "./NewTabPluginButtons";
 import { ReleaseNotesPage, ReleaseNotesPostcard } from "./Postcard";
 import { TelemetryAsk } from "./TelemetryAsk";
 import { closeReleaseNotes, openReleaseNotes, retireReleaseNotes, usePendingReleaseNotes, useReleaseNotesPage } from "../../state/releaseNotes/releaseNotes";
@@ -22,6 +23,7 @@ export function NewTabExtras({ size, bar }: { size: { width: number; height: num
       <CheckInBanner windowId={windowId} />
       <TelemetryAsk windowId={windowId} size={size} bar={bar} />
       {incognito ? null : <PersonalizeButton windowId={windowId} />}
+      {incognito ? null : <NewTabPluginButtons windowId={windowId} />}
       {pending && !incognito && !page ? (
         <ReleaseNotesPostcard notes={pending} size={size} onOpen={() => openReleaseNotes(windowId)} onDismiss={retireReleaseNotes} />
       ) : null}

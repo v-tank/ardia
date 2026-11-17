@@ -19,6 +19,7 @@ export function BarField({
   focusEcho,
   onSelection,
   claim,
+  placeholder,
   ...events
 }: {
   inputRef: RefObject<TextInput | null>;
@@ -29,6 +30,7 @@ export function BarField({
   scope: SearchScope | null;
   incognito: boolean;
   claim?: FocusClaim;
+  placeholder?: string;
 } & Pick<InputProps, "value" | "onLayout" | "onChangeText" | "onSubmitEditing" | "onFocus" | "onBlur" | "keyDownEvents" | "onKeyDown">) {
   const theme = useTheme();
   const nativeText = useRef<string | null>(null);
@@ -71,7 +73,7 @@ export function BarField({
         }
         onSelection(next);
       }}
-      placeholder={scope ? `Search ${scope.name}` : incognito ? "Search privately or enter address" : "Search or enter address"}
+      placeholder={placeholder ?? (scope ? `Search ${scope.name}` : incognito ? "Search privately or enter address" : "Search or enter address")}
       placeholderTextColor={theme.placeholder}
       pastedTypes={PASTED_TYPES}
       selectionColor={theme.selection}

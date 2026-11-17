@@ -22,6 +22,9 @@ const NONE = {
   plugin_values_set: 0,
   plugin_toolbar_presses: 0,
   plugin_menu_runs: 0,
+  plugin_newtab_asks: 0,
+  plugin_newtab_mode_switches: 0,
+  plugin_newtab_button_presses: 0,
 };
 
 export type PluginCount = keyof typeof NONE;

@@ -1,62 +1,29 @@
 import { devRegister } from "../dev/devRegister";
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Pressable, StyleSheet } from "react-native";
 import { PERSONALIZE_COPY, TabLayoutPicker } from "../onboarding/Personalize";
 import { ThemePicker } from "../settings/ThemeEditor";
 import { useWindowProfileValue } from "../../state/profiles/hooks";
-import { Box, capsule, Panel, proseLineHeight, shadow, space, Symbol, Text, useHover, useTheme } from "../ui";
-import { PERSONALIZE_PANEL } from "./tokens";
+import { Box, Panel, proseLineHeight, shadow, space, Text } from "../ui";
+import { NTP_ROUND_BUTTON, PERSONALIZE_PANEL } from "./tokens";
+import { NtpRoundButton } from "./NtpRoundButton";
 import { closePersonalizePanelOf, setPersonalizePanel as setOpen, usePersonalizePanel } from "../../state/pages/personalizePanel";
-import { buttonMotion, usePressScaleMotion } from "../ui/motion";
 import { perLook } from "../ui/tokens";
 
-const INSET = space.xl;
-const BUTTON = 30;
-const GLYPH_DROP = 1.5;
+export const INSET = space.xl;
 const PANEL_WIDTH = 352;
 const EDITING_PANEL_WIDTH = 432;
 
 export function PersonalizeButton({ windowId }: { windowId: string }) {
-  const theme = useTheme();
-  const { hovered, hoverProps } = useHover();
-  const pressMotion = usePressScaleMotion(true, buttonMotion.iconPressScale);
   const open = usePersonalizePanel((s) => s.windowId === windowId);
   useEffect(() => () => closePersonalizePanelOf(windowId), [windowId]);
   return (
     <>
       {open ? <PersonalizePanel windowId={windowId} onClose={() => setOpen(null)} /> : null}
-      <View {...hoverProps} tooltip="Personalize" style={{ position: "absolute", right: INSET, bottom: INSET - GLYPH_DROP }}>
-        <Pressable
-          onPress={() => setOpen(open ? null : windowId)}
-          onPressIn={pressMotion.onPressIn}
-          onPressOut={pressMotion.onPressOut}
-          accessibilityRole="button"
-          accessibilityLabel="Personalize"
-          accessibilityState={{ expanded: open }}
-        >
-          {({ pressed }) => (
-            <View
-              style={{
-                width: BUTTON,
-                height: BUTTON,
-                borderRadius: capsule(BUTTON),
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: pressed ? theme.toolbarPressed : hovered || open ? theme.toolbarHover : undefined,
-              }}
-            >
-              <Animated.View style={[PERSONALIZE_GLYPH, pressMotion.scale ? { transform: [{ scale: pressMotion.scale }] } : null]}>
-                <Symbol name="paintpalette" size={14} color={hovered || open ? theme.icon : theme.textTertiary} style={PERSONALIZE_GLYPH} />
-              </Animated.View>
-            </View>
-          )}
-        </Pressable>
-      </View>
+      <NtpRoundButton icon="paintpalette" label="Personalize" active={open} onPress={() => setOpen(open ? null : windowId)} style={{ position: "absolute", right: INSET, bottom: INSET - NTP_ROUND_BUTTON.glyphDrop }} />
     </>
   );
 }
-
-const PERSONALIZE_GLYPH = { width: BUTTON, height: BUTTON, alignItems: "center", justifyContent: "center" } as const;
 
 function PersonalizePanel({ windowId, onClose }: { windowId: string; onClose: () => void }) {
   const t = useRef(new Animated.Value(0)).current;
@@ -71,7 +38,7 @@ function PersonalizePanel({ windowId, onClose }: { windowId: string; onClose: ()
         style={{
           position: "absolute",
           right: INSET,
-          bottom: INSET + BUTTON + space.m,
+          bottom: INSET + NTP_ROUND_BUTTON.size + space.m,
           width: editing ? EDITING_PANEL_WIDTH : PANEL_WIDTH,
           opacity: t.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: "clamp" }),
           transform: [{ translateY: t.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }, { scale: t.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) }],

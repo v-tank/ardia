@@ -140,3 +140,5 @@ export const SITE_BRAND_COLORS: Readonly<Record<string, string>> = {
   "notion.so": "#000000",
   "apps.apple.com": "#0D96F6",
 };
+
+export const MODE_SWITCH = { top: space.m, gap: space.s, keyScale: 0.75 } as const;

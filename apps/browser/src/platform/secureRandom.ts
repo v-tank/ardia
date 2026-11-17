@@ -5,3 +5,4 @@ export const secureRandomHex = (length: number): string => {
   while (out.length < length) out += uuid.v4().replace(/-/g, "");
   return out.slice(0, length);
 };
+export const randomUuid = (): string => uuid.v4().toLowerCase();

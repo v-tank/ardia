@@ -12,24 +12,27 @@ const INSET = StyleSheet.hairlineWidth * 2;
 const SEGMENT = { height: 20, imageWidth: 30, glyph: 11, glyphBox: 14 } as const;
 const SEGMENT_RADIUS = concentric(radius.control, INSET);
 
-export function Segmented<T extends string>({ options, value, onChange }: { options: SegmentOption<T>[]; value: T; onChange: (value: T) => void }) {
+export type SegmentedLook = "form" | "quiet";
+
+export function Segmented<T extends string>({ options, value, onChange, look = "form" }: { options: SegmentOption<T>[]; value: T; onChange: (value: T) => void; look?: SegmentedLook }) {
   const theme = useTheme();
   const thumb = useSlidingThumb(value);
+  const quiet = look === "quiet";
   return (
-    <View style={{ borderRadius: radius.control, backgroundColor: theme.control, borderWidth: INSET, borderColor: theme.controlBorder, padding: INSET }}>
+    <View style={{ borderRadius: radius.control, backgroundColor: quiet ? theme.rowHover : theme.control, borderWidth: INSET, borderColor: quiet ? theme.rowHover : theme.controlBorder, padding: INSET }}>
       <View style={{ flexDirection: "row" }}>
-        <SlidingThumb x={thumb.x} width={thumb.width} style={{ borderRadius: SEGMENT_RADIUS, backgroundColor: theme.formAccent }} />
+        <SlidingThumb x={thumb.x} width={thumb.width} style={{ borderRadius: SEGMENT_RADIUS, backgroundColor: quiet ? theme.toolbarPressed : theme.formAccent }} />
         {options.map((o) => (
-          <Segment key={o.value} option={o} selected={o.value === value} onPress={() => onChange(o.value)} onLayout={(e) => thumb.measure(o.value, e)} />
+          <Segment key={o.value} option={o} quiet={quiet} selected={o.value === value} onPress={() => onChange(o.value)} onLayout={(e) => thumb.measure(o.value, e)} />
         ))}
       </View>
     </View>
   );
 }
 
-function Segment<T extends string>({ option, selected, onPress, onLayout }: { option: SegmentOption<T>; selected: boolean; onPress: () => void; onLayout: (e: LayoutChangeEvent) => void }) {
+function Segment<T extends string>({ option, quiet, selected, onPress, onLayout }: { option: SegmentOption<T>; quiet: boolean; selected: boolean; onPress: () => void; onLayout: (e: LayoutChangeEvent) => void }) {
   const theme = useTheme();
-  const ink = selected ? theme.onAccent : theme.icon;
+  const ink = quiet ? (selected ? theme.textPrimary : theme.textSecondary) : selected ? theme.onAccent : theme.icon;
   const pressMotion = usePressScaleMotion(true, buttonMotion.controlPressScale);
   const scaleStyle = pressMotion.scale ? { transform: [{ scale: pressMotion.scale }] } : null;
   return (
@@ -58,7 +61,7 @@ function Segment<T extends string>({ option, selected, onPress, onLayout }: { op
         {option.image ? (
           <Symbol name={option.image} size={SEGMENT.glyph} color={ink} style={{ width: SEGMENT.glyphBox, height: SEGMENT.glyphBox }} />
         ) : (
-          <Text size="small" color={selected ? theme.onAccent : theme.textPrimary}>
+          <Text size="small" color={quiet ? ink : selected ? theme.onAccent : theme.textPrimary}>
             {option.title}
           </Text>
         )}

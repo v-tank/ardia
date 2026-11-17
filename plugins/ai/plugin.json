@@ -59,6 +59,10 @@
     { "name": "set-up", "title": "Set Up AI", "icon": "gearshape", "keywords": ["assistant", "sign in"], "open": "tab", "path": "/welcome" }
   ],
   "toolbar": { "title": "Ask AI", "icon": "sparkles", "command": "ask-beside", "shortcut": "cmd+shift+e" },
+  "newTab": {
+    "mode": { "title": "Ask", "placeholder": "Ask anything, or about your tabs…", "defaultRow": "newTab", "defaultValue": "chat", "path": "{id}" },
+    "button": { "title": "AI chats", "icon": "clock.arrow.circlepath", "path": "history" }
+  },
   "page": { "title": "AI", "icon": "sparkles", "served": true },
   "process": {
     "run": ["bin/ardia-ai", "ardia"],

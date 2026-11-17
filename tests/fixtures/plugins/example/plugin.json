@@ -3,7 +3,7 @@
   "manifest": 1,
   "name": "example",
   "title": "Example",
-  "description": "Uses every contribution: settings, commands, a toolbar button, a page, a helper, hooks and tools.",
+  "description": "Uses every contribution: settings, commands, a toolbar button, a New Tab mode and button, a page, a helper, hooks and tools.",
   "version": "1.0.0",
   "permissions": [
     "tabs",
@@ -99,6 +99,20 @@
     "icon": "hand.wave",
     "command": "say-hello",
     "shortcut": "ctrl+opt+cmd+h"
+  },
+  "newTab": {
+    "mode": {
+      "title": "Hello",
+      "placeholder": "Say hello to the example…",
+      "defaultRow": "mood",
+      "defaultValue": "busy",
+      "path": "chats/{id}"
+    },
+    "button": {
+      "title": "Example History",
+      "icon": "clock.arrow.circlepath",
+      "path": "history"
+    }
   },
   "page": {
     "title": "Example",

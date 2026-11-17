@@ -50,10 +50,11 @@ export function DropdownFrame({ rootRef, onContextMenu, leadingIcon, scope, fiel
   );
 }
 
-export function PanelFrame({ rootRef, onContextMenu, leadingIcon, scope, field, list, rowsHover, pulse, hero, rowHeight, bottom }: FrameProps & { hero: boolean; rowHeight: number; bottom: ReactNode }) {
+export function PanelFrame({ rootRef, onContextMenu, leadingIcon, scope, field, list, rowsHover, pulse, hero, rowHeight, bottom, modeSwitch }: FrameProps & { hero: boolean; rowHeight: number; bottom: ReactNode; modeSwitch?: ReactNode }) {
   return (
     <View ref={rootRef}>
       {pulse}
+      {modeSwitch}
       <ContextMenuArea captureDescendants onContextMenu={onContextMenu}>
         <View
           style={{

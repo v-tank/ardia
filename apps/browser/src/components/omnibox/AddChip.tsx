@@ -1,9 +1,13 @@
+import { displayUrl } from "@ardia/core";
 import { memo } from "react";
 import { Animated, Pressable, View } from "react-native";
 import { Symbol, Text, useHover, useTheme } from "../ui";
 import { GlassFill, useGlass } from "../ui/Glass";
 import { buttonMotion, usePressScaleMotion } from "../ui/motion";
 import { ADD_CHIP } from "./tokens";
+import { pickFiles } from "../../state/app/system";
+import { chooseFromMenu } from "../../state/app/menuChoice";
+import { otherOpenTabs, switchFromBar } from "../../state/omnibox/openFromBar";
 
 export const AddChip = memo(function AddChip({ onPress }: { onPress(): void }) {
   const theme = useTheme();
@@ -36,3 +40,17 @@ export const AddChip = memo(function AddChip({ onPress }: { onPress(): void }) {
     </View>
   );
 });
+
+export async function openTabOrFile(windowId: string, tabId: string, onGo: (url: string) => void) {
+  const others = otherOpenTabs(windowId, ADD_CHIP.otherTabs);
+  const choice = await chooseFromMenu<{ tab: string }, "files">([
+    ...others.map((t) => ({ value: { tab: t.id }, title: t.title || displayUrl(t.url) })),
+    ...(others.length ? [{ separator: true as const }] : []),
+    { id: "files", title: "Open File…", symbol: "doc" },
+  ]);
+  if (choice && typeof choice === "object") switchFromBar(choice.tab, "", tabId, "current");
+  if (choice === "files") {
+    const [file] = await pickFiles();
+    if (file) onGo(file);
+  }
+}

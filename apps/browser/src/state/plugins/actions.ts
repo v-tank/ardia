@@ -12,4 +12,5 @@ export const showPluginsFolder = () => revealPluginsFolder();
 export const pluginsFolderPath = () => (PLATFORM_FEATURES.plugins ? pluginsFolder() : "");
 export { pressBannerStop } from "./banners";
 export type { PluginToolbarButton } from "./surfaces";
+export { newTabModeTarget, nextMode, noteNewTabModeSubmit, noteNewTabModeSwitch, openNewTabButton, shownMode, startingMode } from "./newTab";
 export const pressPluginToolbarButton = (id: string, windowId: string) => void runPluginCommand(id, windowId, "toolbar");

@@ -316,6 +316,71 @@
         "icon",
         "command"
       ]
+    },
+    "newTab": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^[\\s\\S]{1,16}$"
+            },
+            "placeholder": {
+              "type": "string",
+              "pattern": "^[\\s\\S]{1,80}$"
+            },
+            "defaultRow": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,40}$",
+              "description": "A choice row whose value picks the mode New Tab starts in"
+            },
+            "defaultValue": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,40}$",
+              "description": "The row's value that starts New Tab in this mode"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^[^#\\s]{0,512}$",
+              "description": "The page path Enter opens, with ?q=<text> added; {id} becomes a new UUID each time"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "placeholder",
+            "path"
+          ]
+        },
+        "button": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "pattern": "^[\\s\\S]{1,40}$"
+            },
+            "icon": {
+              "type": "string",
+              "pattern": "^[a-z0-9.]{1,64}$",
+              "description": "An SF Symbol name"
+            },
+            "path": {
+              "type": "string",
+              "pattern": "^[^#\\s]{0,512}$",
+              "description": "The page path the button opens; {id} becomes a new UUID each time"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title",
+            "icon",
+            "path"
+          ]
+        }
+      }
     }
   },
   "additionalProperties": false,

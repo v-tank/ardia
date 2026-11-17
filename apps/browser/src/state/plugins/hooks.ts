@@ -21,3 +21,4 @@ export { usePluginBanner } from "./banners";
 export { usePageRunning } from "./pageGroups";
 export const usePageHead = (groupId: string) => useBrowser((s) => pageHeadOf(s, groupId));
 export { usePluginToolbarButtons } from "./surfaces";
+export { useNewTabButtons, useNewTabModes, type NewTabButtonOption, type NewTabModeOption } from "./newTab";

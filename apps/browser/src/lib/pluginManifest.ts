@@ -3,10 +3,10 @@ import { upgraded, type Migrations } from "./savedDocument";
 import { isPagePath, RESERVED_PAGE_NAMES } from "./pluginNames";
 import { isPluginPath, processOf, PROCESS_LIMITS, type ProcessSpec } from "./pluginProcess";
 import { telemetryOf, type TelemetrySpec } from "./pluginTelemetry";
-import { surfaceProblems, toolbarOf, type ToolbarSpec } from "./pluginSurfaces";
+import { newTabOf, surfaceProblems, toolbarOf, type NewTabSpec, type ToolbarSpec } from "./pluginSurfaces";
 
 export { isPluginPath, type AccessGrant, type ProcessSpec } from "./pluginProcess";
-export type { ToolbarSpec } from "./pluginSurfaces";
+export type { NewTabButton, NewTabMode, NewTabSpec, ToolbarSpec } from "./pluginSurfaces";
 
 export const MANIFEST_VERSION = 1;
 export const MANIFEST_FILE = "plugin.json";
@@ -74,6 +74,7 @@ export type PluginManifest = {
   tools: ToolSpec[];
   telemetry: TelemetrySpec;
   toolbar: ToolbarSpec | null;
+  newTab: NewTabSpec | null;
 };
 
 export type ManifestRead = { manifest: PluginManifest | null; problems: string[]; newer: boolean };
@@ -274,7 +275,7 @@ function permissionsOf(c: Check, value: unknown): PluginPermission[] {
   return out;
 }
 
-const TOP_KEYS = ["$schema", "manifest", "name", "title", "description", "version", "requires", "permissions", "settings", "commands", "page", "process", "hooks", "tools", "telemetry", "toolbar"];
+const TOP_KEYS = ["$schema", "manifest", "name", "title", "description", "version", "requires", "permissions", "settings", "commands", "page", "process", "hooks", "tools", "telemetry", "toolbar", "newTab"];
 
 export function checkManifest(raw: Fields): { manifest: PluginManifest | null; problems: string[] } {
   const c: Check = { problems: [] };
@@ -294,7 +295,8 @@ export function checkManifest(raw: Fields): { manifest: PluginManifest | null; p
   const process = processOf(c.problems, raw.process);
   const telemetry = telemetryOf(c.problems, raw.telemetry);
   const toolbar = toolbarOf(c.problems, raw.toolbar);
-  surfaceProblems(c.problems, { toolbar }, { commands });
+  const newTab = newTabOf(c.problems, raw.newTab);
+  surfaceProblems(c.problems, { toolbar, newTab }, { commands, page, rows: settings.rows });
   const hooks = list(c, "hooks", raw.hooks, 64).flatMap((h, i) => (typeof h === "string" && h ? [h] : (c.problems.push(`${at("hooks", i)} must be an event name`), [])));
   commands.forEach((x, i) => {
     const action = x.action;
@@ -318,7 +320,7 @@ export function checkManifest(raw: Fields): { manifest: PluginManifest | null; p
   for (const [what, used] of needsProcess) if (used && !process) c.problems.push(`${what} needs a process`);
   if (c.problems.length || !name || !title) return { manifest: null, problems: c.problems };
   return {
-    manifest: { manifest: MANIFEST_VERSION, name, title, description, version, requires, permissions, settings, commands, page, process, hooks, tools, telemetry, toolbar },
+    manifest: { manifest: MANIFEST_VERSION, name, title, description, version, requires, permissions, settings, commands, page, process, hooks, tools, telemetry, toolbar, newTab },
     problems: [],
   };
 }
@@ -356,8 +358,8 @@ export function compareVersions(a: string, b: string): number {
   return x.pre < y.pre ? -1 : 1;
 }
 
-export type Contribution = "settings" | "commands" | "page" | "process" | "hooks" | "tools" | "toolbar";
-export const CONTRIBUTIONS: readonly Contribution[] = ["settings", "commands", "page", "process", "hooks", "tools", "toolbar"];
+export type Contribution = "settings" | "commands" | "page" | "process" | "hooks" | "tools" | "toolbar" | "newTab";
+export const CONTRIBUTIONS: readonly Contribution[] = ["settings", "commands", "page", "process", "hooks", "tools", "toolbar", "newTab"];
 
 export function contributionsOf(m: PluginManifest): Contribution[] {
   const has: Record<Contribution, boolean> = {
@@ -368,6 +370,7 @@ export function contributionsOf(m: PluginManifest): Contribution[] {
     hooks: m.hooks.length > 0,
     tools: m.tools.length > 0,
     toolbar: m.toolbar !== null,
+    newTab: m.newTab !== null,
   };
   return CONTRIBUTIONS.filter((c) => has[c]);
 }

@@ -29,6 +29,8 @@ export function consentLines(m: PluginManifest): ConsentLine[] {
   if (m.commands.some((c) => "open" in c.action && c.action.context)) lines.push({ icon: "rectangle.split.2x1", text: "Its page can be handed the tab you're on when you open it beside that tab" });
   if (m.commands.length) lines.push({ icon: "command.square", text: `Adds to the command bar: ${m.commands.map((c) => c.title).join(", ")}` });
   if (m.toolbar) lines.push({ icon: m.toolbar.icon, text: `Adds a toolbar button: ${m.toolbar.title}${toolbarKey(m.toolbar.shortcut)}` });
+  if (m.newTab?.mode) lines.push({ icon: "character.cursor.ibeam", text: `Adds ${/^[aeiou]/i.test(m.newTab.mode.title) ? "an" : "a"} ${m.newTab.mode.title} mode to the New Tab box, which opens its page with what you type` });
+  if (m.newTab?.button) lines.push({ icon: m.newTab.button.icon, text: `Adds a button to New Tab: ${m.newTab.button.title}` });
   if (m.telemetry.counters.length) lines.push({ icon: "chart.bar", text: "Counts how often you use its features (no content)" });
   if (m.tools.length) lines.push({ icon: "wrench.and.screwdriver", text: `Offers tools to the ardia command and other plugins: ${m.tools.map((t) => t.title).join(", ")}` });
   return lines;

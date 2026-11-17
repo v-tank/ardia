@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 import { useTheme } from "../ui/theme";
 import { duration, springs } from "../ui/motion";
-import { display, font, ink, perLook, proseLineHeight, radius, tracking, weight } from "../ui/tokens";
+import { display, font, ink, perLook, proseLineHeight, radius, space, tracking, weight } from "../ui/tokens";
 
 const dark = {
   cardFill: "#FFFFFF17",
@@ -96,3 +96,5 @@ export const postcard = {
   tooltipIn: duration.fast,
   pageClose: duration.slow,
 };
+
+export const NTP_ROUND_BUTTON = { size: 30, glyph: 14, glyphDrop: 1.5, gap: space.xs } as const;

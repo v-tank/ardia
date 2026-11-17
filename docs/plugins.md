@@ -1,7 +1,7 @@
 # Plugins
 
 A plugin is a folder with a `plugin.json` that adds to Ardia without a restart: Ardia settings it sets and rows it adds
-to Settings, command bar entries, a toolbar button with its own shortcut, a page of its own that opens as a tab at `ardia://<name>`, a long-running helper
+to Settings, command bar entries, a toolbar button with its own shortcut, a mode and a button on New Tab, a page of its own that opens as a tab at `ardia://<name>`, a long-running helper
 program, browser events delivered to that program, and tools the `ardia` command and other plugins can call. Issue
 #2462.
 
@@ -51,6 +51,10 @@ and the `ardia` command's plugin commands still install and list files there.
     { "name": "beside", "title": "Open Example Beside This Tab", "open": "split", "context": true, "sideSetting": "side" }
   ],
   "toolbar": { "title": "Say Hello", "icon": "hand.wave", "command": "say-hello", "shortcut": "cmd+shift+e" },
+  "newTab": {
+    "mode": { "title": "Hello", "placeholder": "Say hello…", "defaultRow": "mood", "defaultValue": "busy", "path": "chats/{id}" },
+    "button": { "title": "Example History", "icon": "clock.arrow.circlepath", "path": "history" }
+  },
   "page": { "title": "Example", "icon": "sparkles", "file": "page/index.html" },
   "process": { "run": ["/usr/bin/python3", "helper.py"], "memoryMB": 256 },
   "hooks": ["tab.activated", "tab.navigated"],
@@ -118,6 +122,30 @@ in Settings › Keyboard Shortcuts like any other item. A shortcut Ardia already
 a profile's ⌃1 to ⌃9 or a menu bar item of macOS's own) is a manifest problem: `plugin.json: toolbar.shortcut ⌘E is taken
 by Use Selection for Find`. If two plugins ask for the same free shortcut, the first in the Plugins pane's order gets it.
 The menu item's id is `runPluginCommand:<plugin>/<command>`; the `ardia` command can't run it (`docs/automation.md`).
+
+### newTab
+
+Needs a `page`. Either part, or both:
+
+- `mode` adds a mode to the New Tab box (the New Tab page's box and the centred box ⌘T opens): a small switch in its top
+  left reads "Search | `<title>`" (with each plugin's mode in the Plugins pane's order) beside a `tab` key hint, and Tab
+  (⇧Tab backwards) cycles it while the box is empty. In the plugin's mode the box shows `placeholder` (up to 80
+  characters), the page's icon instead of the magnifying glass, no suggestions, no inline completion and no site
+  search keywords, and the Go pill reads "`<title>` ↩" (`title` up to 16 characters). Enter opens
+  `ardia://<plugin>/<path>?q=<what you typed>` in place of that New Tab, as a typed address would; what you type
+  is cut to fit a page path (512 characters). Text that is an address (`example.com`, `https://…`) still opens as that
+  address. `defaultRow` and `defaultValue` (together) name one of the plugin's `choice` rows and one of its values:
+  while the row holds that value, New Tab starts in this mode, otherwise in Search; the switch remembers a choice only
+  for that box. Private windows don't offer plugin modes.
+- `button` adds a round button to the New Tab page's bottom left, the Personalize button's twin (`title` is its
+  tooltip, `icon` an SF Symbol name). It opens `ardia://<plugin>/<path>` in place of the empty New Tab, or goes to that
+  page if the window already has it open. Not in private windows.
+
+A `path` is a page path with or without its leading `/` (`history`, `/chats/recent`), and a mode's has no query. Each
+`{id}` in it becomes a new random UUID (lowercase) every time, so `"path": "{id}"` opens `ardia://ai/<uuid>?q=…`: a page
+whose address must be its own id from the first moment, since navigation inside the page can't change the tab's
+address yet (#2518). The consent sheet says "Adds a `<title>` mode to the New Tab box, which opens its page with what
+you type" and "Adds a button to New Tab: `<title>`".
 
 ### page
 
@@ -203,14 +231,14 @@ because another plugin's name must never be sent; for any other plugin they're d
 | `pages` | The helper may call `browse` and `tab.banner`: read and act on the pages in your tabs through the `ardia browse` layer (needs `tabs`). Consent: "Reads and acts on the pages in your tabs" |
 
 Contributions grant their own reach and are shown too: running a program, adding a page, adding commands, adding a
-toolbar button and its shortcut, changing named Ardia settings, offering tools.
+toolbar button and its shortcut, adding a New Tab mode or button, changing named Ardia settings, offering tools.
 
 ## Turning a plugin on
 
 A plugin you install is off. Turning it on in Settings › Plugins shows what it gets, in words built from the
 manifest ("Runs a program in the background: /usr/bin/python3 helper.py", "Sees the address and title of your tabs",
 "Runs Ardia commands", "Connects to the internet", "Reads and writes ~/.claude", "Reads ~/.local/share/claude",
-"Changes these settings: commandBarStart", "Adds a page you open as a tab", "Adds a toolbar button: Ask AI (⇧⌘E)", …). Turn On approves that exact manifest in that exact folder: Ardia keeps the SHA-256 of the manifest's text and the
+"Changes these settings: commandBarStart", "Adds a page you open as a tab", "Adds a toolbar button: Ask AI (⇧⌘E)", "Adds an Ask mode to the New Tab box, …", …). Turn On approves that exact manifest in that exact folder: Ardia keeps the SHA-256 of the manifest's text and the
 plugin folder's identity on disk (device and inode, after links) in `plugins.json`.
 
 - **A changed manifest needs a new approval.** If `plugin.json` changes while the plugin is on, the plugin stops (its
@@ -379,16 +407,18 @@ The control socket's protocol 4 adds `plugins`, `plugins.enable` (`{"waiting": t
 
 ## Code
 
-- `lib/pluginManifest.ts`: parsing, migration, checks and the schema (`lib/pluginProcess.ts` for `process` and its `access` grants, `lib/pluginSurfaces.ts` for `toolbar`); `lib/pluginManifest.test.mjs`, `lib/pluginSurfaces.test.mjs`.
+- `lib/pluginManifest.ts`: parsing, migration, checks and the schema (`lib/pluginProcess.ts` for `process` and its `access` grants, `lib/pluginSurfaces.ts` for `toolbar` and `newTab`); `lib/pluginManifest.test.mjs`, `lib/pluginSurfaces.test.mjs`.
 - `state/plugins/`: the registry (`store.ts`), saved state (`savedState.ts`), turning on and off (`lifecycle.ts`),
   settings defaults (`defaults.ts`), the helper channel (`channel.ts`, `channelMethods.ts`; `arrange.ts` for workspace, apply and groups, `browse.ts` and `browseServer.ts`, `banners.ts`), tools (`tools.ts`),
   command bar entries (`commands.ts`), the toolbar button, its menu item and shortcut (`surfaces.ts`, checked against
-  Ardia's own shortcuts in `appChecks.ts`; `surfaces.test.mjs`), page tabs (`pages.ts`, `pageNames.ts`), consent copy (`consent.ts`), socket methods
+  Ardia's own shortcuts in `appChecks.ts`; `surfaces.test.mjs`), New Tab modes and buttons (`newTab.ts`, `newTab.test.mjs`), page tabs (`pages.ts`, `pageNames.ts`), consent copy (`consent.ts`), socket methods
   (`socketMethods.ts`).
 - `platform/plugins.ts` binds `ArdiaPlugins` (`packages/shell/ios/PluginsModule.swift`, `PluginFolder.swift`,
   `PluginProcess.swift`, `PluginCore/PluginSandbox.swift` (tested by `packages/shell/plugin-tests`, run by `swift test` in `packages/shell`), `PluginPageView.swift`, `PluginSchemeHandler.swift`).
 - The Plugins menu: `MainMenu.swift` builds it from the menu state's `plugins`, each item the `runPluginCommand` command.
-- UI: `components/toolbar/PluginToolbarButtons.tsx` (placed by `Toolbar.tsx`, its width in `trailingButtons.ts`), `components/settings/panes/Plugins.tsx`, `components/plugins/PluginPage.tsx` (rendered by `components/pages/InternalPage.tsx`), `components/plugins/PluginBanner.tsx` (in `TabPane`, under the share bar).
+- UI: `components/omnibox/useNewTabMode.tsx` and `ModeSwitch.tsx` (the mode in `Omnibox.tsx`, the switch a quiet
+  `Segmented`), `components/ntp/NewTabPluginButtons.tsx` (with Personalize, an `NtpRoundButton`),
+  `components/toolbar/PluginToolbarButtons.tsx` (placed by `Toolbar.tsx`, its width in `trailingButtons.ts`), `components/settings/panes/Plugins.tsx`, `components/plugins/PluginPage.tsx` (rendered by `components/pages/InternalPage.tsx`), `components/plugins/PluginBanner.tsx` (in `TabPane`, under the share bar).
 - The example plugin used by the tests: `tests/fixtures/plugins/example/`.
 
 ## Telemetry
@@ -399,10 +429,12 @@ Counts only, never plugin names, titles, URLs, row values, tool input or output:
 `plugin_arrange_calls`, `plugin_arrange_failures` (`apply`, `group.withPage`, `split.toGroup`), `plugin_browse_calls`,
 `plugin_browse_failures`, `plugin_browse_leases` (token server started only for a plugin), `plugin_banners_shown`,
 `plugin_banner_stops`, `plugin_values_set`, `plugin_toolbar_presses` (a plugin's toolbar button), `plugin_menu_runs`
-(its Plugins menu item or shortcut); the daily settings snapshot's
+(its Plugins menu item or shortcut), `plugin_newtab_asks` (Enter in a plugin's New Tab mode),
+`plugin_newtab_mode_switches` (Tab or a click on the switch), `plugin_newtab_button_presses`; the daily settings snapshot's
 `plugins_installed`, `plugins_enabled` and, among those on, how many use each contribution:
 `plugins_with_settings`, `plugins_with_commands`, `plugins_with_page`, `plugins_with_process`,
-`plugins_with_hooks`, `plugins_with_tools`, `plugins_with_toolbar`. Dashboard: watch `plugin_toolbar_presses` and
-`plugin_menu_runs` against `plugins_with_toolbar` for whether the button and shortcut get used, `plugin_process_crashes` against
+`plugins_with_hooks`, `plugins_with_tools`, `plugins_with_toolbar`, `plugins_with_newTab`. Dashboard: watch `plugin_toolbar_presses` and
+`plugin_menu_runs` against `plugins_with_toolbar` for whether the button and shortcut get used, `plugin_newtab_asks` against `plugins_with_newTab` for New Tab asks,
+`plugin_process_crashes` against
 `plugin_process_starts`, `plugin_browse_failures` against `plugin_browse_calls`, and `plugin_arrange_failures`
 against `plugin_arrange_calls`.
