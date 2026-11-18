@@ -70,6 +70,8 @@ export function useChat(chatId: string) {
           await connection.call((c) =>
             c["orchestration.dispatchCommand"]({
               type: "message.dispatch",
+              createdBy: "user",
+              creationSource: "web",
               commandId: uuid(),
               threadId: chatId,
               messageId: uuid(),

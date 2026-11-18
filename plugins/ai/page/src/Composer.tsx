@@ -36,13 +36,14 @@ export function Composer(props: Props) {
     const el = field.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [text]);
   useEffect(() => {
     field.current?.focus();
   }, []);
 
   const context: TagRef[] = [...(useThisTab && props.contextTab ? [props.contextTab] : []), ...tags.filter((t) => t.id !== props.contextTab?.id)];
+  const ready = !!text.trim() && !!props.model;
 
   const send = () => {
     const value = text.trim();
@@ -65,94 +66,94 @@ export function Composer(props: Props) {
     setTabs(await props.loadTabs().catch(() => []));
   };
 
-  const fav = (t: TagRef) => {
-    const known = props.tabs.byId.get(t.id);
-    return <Favicon key={t.id} src={known?.favicon} url={known?.url ?? t.url} title={t.title} />;
-  };
+  const drop = (t: TagRef) => (t.id === props.contextTab?.id ? setUseThisTab(false) : setTags(tags.filter((x) => x.id !== t.id)));
 
   return (
-    <div className="bar-wrap">
-      <div className="bar">
-        <textarea ref={field} rows={1} value={text} placeholder={props.placeholder} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} data-testid="prompt" />
-        <div className="foot">
-          {context.length === 1 && (
-            <button className="ctx" title={context[0]!.title} onClick={() => (context[0]!.id === props.contextTab?.id ? setUseThisTab(false) : setTags([]))} data-testid="this-tab">
-              {fav(context[0]!)}
-              <span>{context[0]!.id === props.contextTab?.id ? "This tab" : context[0]!.title}</span>
-            </button>
+    <div className="composer-wrap">
+      <div className="composer">
+        <button className="round plus" data-glass="control" aria-label="Add tabs" title="Add tabs" onClick={() => void openTabs()} data-testid="add-tabs">
+          {Icon.plus}
+        </button>
+        <div className="capsule" data-glass="control" data-glass-id="capsule">
+          {context.length > 0 && (
+            <div className="chips">
+              {context.map((t) => {
+                const known = props.tabs.byId.get(t.id);
+                return (
+                  <span key={t.id} className="chip" title={known?.url ?? t.title} data-testid={t.id === props.contextTab?.id ? "this-tab" : "tag"}>
+                    <Favicon src={known?.favicon} url={known?.url ?? t.url} title={t.title} />
+                    <span className="label">{t.id === props.contextTab?.id ? (known?.title ?? t.title) : t.title}</span>
+                    <button className="chip-x" aria-label={`Remove ${t.title}`} onClick={() => drop(t)}>
+                      {Icon.x}
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
           )}
-          {context.length > 1 && (
-            <button className="ctx" title={context.map((t) => t.title).join(", ")} onClick={() => void openTabs()} data-testid="context-tabs">
-              <span className="stack">{context.slice(0, 3).map(fav)}</span>
-              <span>{context.length} tabs</span>
-            </button>
-          )}
-          {context.length === 0 && props.contextTab && (
-            <button className="ctx off" onClick={() => setUseThisTab(true)} data-testid="this-tab">
-              <span>This tab</span>
-            </button>
-          )}
-          <button className="ctx add" aria-label="Add tabs" title="Add tabs" onClick={() => void openTabs()} data-testid="add-tabs">
-            {context.length || props.contextTab ? "＋" : "＋ Add tabs"}
-          </button>
-          <span className="spacer" />
-          <button className="model" onClick={() => setMenu(menu === "model" ? null : "model")} data-testid="model">
-            {props.model ? `${shortModel(props.model)} · your plan` : "No model"}
-          </button>
-          {props.working ? (
-            <button className="go stop" onClick={props.onStop} data-testid="stop">
-              Stop
-            </button>
-          ) : (
-            <button className="go" disabled={!text.trim() || !props.model} onClick={send} data-testid="send">
-              Ask ↩
-            </button>
-          )}
-        </div>
-        {menu === "tabs" && (
-          <div className="menu" style={{ left: 0 }}>
-            <div className="heading">Add tabs to this chat</div>
-            {tabs.length === 0 && <div className="heading">No other tabs</div>}
-            {tabs.map((t) => {
-              const on = tags.some((x) => x.id === t.id) || (useThisTab && props.contextTab?.id === t.id);
-              return (
-                <button
-                  key={t.id}
-                  className="item"
-                  onClick={() => {
-                    if (props.contextTab?.id === t.id) return setUseThisTab(!useThisTab);
-                    setTags(on ? tags.filter((x) => x.id !== t.id) : [...tags, { id: t.id, title: t.title || t.url, url: t.url }]);
-                  }}
-                >
-                  <span className="check">{on ? Icon.check : null}</span>
-                  <Favicon src={t.favicon} url={t.url} title={t.title} />
-                  <span className="label">{t.title || t.url}</span>
-                  {t.inChatGroup && <span className="sub">In this chat</span>}
-                </button>
-              );
-            })}
+          <div className="field-row">
+            <textarea ref={field} rows={1} value={text} placeholder={props.placeholder} onChange={(e) => setText(e.target.value)} onKeyDown={onKey} data-testid="prompt" />
+            {props.working ? (
+              <button className="round send stop" aria-label="Stop" title="Stop" onClick={props.onStop} data-testid="stop">
+                {Icon.stop}
+              </button>
+            ) : (
+              <button className={`round send${ready ? " ready" : ""}`} aria-label="Send" title="Send" disabled={!ready} onClick={send} data-testid="send">
+                {Icon.up}
+              </button>
+            )}
           </div>
-        )}
-        {menu === "model" && (
-          <div className="menu" style={{ right: 0 }}>
-            <div className="heading">Runs on your own plan</div>
-            {props.models.map((m) => (
+        </div>
+      </div>
+      <div className="composer-meta">
+        <button className="model" onClick={() => setMenu(menu === "model" ? null : "model")} data-testid="model">
+          {props.model ? `${shortModel(props.model)} · your plan` : "No model"}
+          {Icon.chevron}
+        </button>
+      </div>
+      {menu === "tabs" && (
+        <div className="menu" style={{ left: 16 }}>
+          <div className="heading">Add tabs to this chat</div>
+          {tabs.length === 0 && <div className="heading">No other tabs</div>}
+          {tabs.map((t) => {
+            const on = tags.some((x) => x.id === t.id) || (useThisTab && props.contextTab?.id === t.id);
+            return (
               <button
-                key={`${m.instanceId}:${m.slug}`}
+                key={t.id}
                 className="item"
                 onClick={() => {
-                  props.onModel(m);
-                  setMenu(null);
+                  if (props.contextTab?.id === t.id) return setUseThisTab(!useThisTab);
+                  setTags(on ? tags.filter((x) => x.id !== t.id) : [...tags, { id: t.id, title: t.title || t.url, url: t.url }]);
                 }}
               >
-                <span className="check">{props.model?.slug === m.slug ? Icon.check : null}</span>
-                <span className="label">{m.label}</span>
-                <span className="sub">{m.signedIn ? m.plan.replace("your ", "") : "Not signed in"}</span>
+                <span className="check">{on ? Icon.check : null}</span>
+                <Favicon src={t.favicon} url={t.url} title={t.title} />
+                <span className="label">{t.title || t.url}</span>
+                {t.inChatGroup && <span className="sub">In this chat</span>}
               </button>
-            ))}
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
+      {menu === "model" && (
+        <div className="menu" style={{ right: 16 }}>
+          <div className="heading">Runs on your own plan</div>
+          {props.models.map((m) => (
+            <button
+              key={`${m.instanceId}:${m.slug}`}
+              className="item"
+              onClick={() => {
+                props.onModel(m);
+                setMenu(null);
+              }}
+            >
+              <span className="check">{props.model?.slug === m.slug ? Icon.check : null}</span>
+              <span className="label">{m.label}</span>
+              <span className="sub">{m.signedIn ? m.plan.replace("your ", "") : "Not signed in"}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

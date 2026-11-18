@@ -5,6 +5,7 @@ import { History } from "./History";
 import { RuntimeStopped } from "./Notices";
 import { SessionProvider, useSession } from "./session";
 import { Welcome } from "./Welcome";
+import { watchGlass } from "./glass";
 
 export type Route = { kind: "chat"; chatId: string } | { kind: "new" } | { kind: "history" } | { kind: "welcome" };
 
@@ -54,6 +55,7 @@ function Screen() {
 }
 
 export function App() {
+  useEffect(() => watchGlass(), []);
   return (
     <SessionProvider>
       <div className="app">

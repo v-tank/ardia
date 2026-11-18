@@ -78,9 +78,10 @@ async function tag(deps: ApiDeps, chatId: string, tabs: string[]) {
   if (!chatTab) return { group: null };
   const fresh = tabs.filter((t) => t !== chatTab.id && !(snapshot.groupTabs.includes(t) && snapshot.group));
   if (!snapshot.group && snapshot.split) {
-    const { group } = await deps.host.splitToGroup(chatTab.id);
     const rest = fresh.filter((t) => !snapshot.splitTabs.includes(t));
-    if (rest.length) await deps.host.groupWithChat(chatTab.id, rest);
+    if (!rest.length) return { group: null };
+    const { group } = await deps.host.splitToGroup(chatTab.id);
+    await deps.host.groupWithChat(chatTab.id, rest);
     deps.count("tag_groups_created");
     return { group };
   }

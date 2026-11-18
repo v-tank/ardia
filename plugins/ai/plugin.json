@@ -63,7 +63,7 @@
     "mode": { "title": "Ask", "placeholder": "Ask anything, or about your tabs…", "defaultRow": "newTab", "defaultValue": "chat", "path": "{id}" },
     "button": { "title": "AI chats", "icon": "clock.arrow.circlepath", "path": "history" }
   },
-  "page": { "title": "AI", "icon": "sparkles", "served": true },
+  "page": { "title": "AI", "icon": "sparkles", "served": true, "background": "window" },
   "process": {
     "run": ["bin/ardia-ai", "ardia"],
     "memoryMB": 2048,

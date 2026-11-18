@@ -8,15 +8,15 @@ const kebab = (name: string) => name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase(
 function roleVars(roles: Record<string, unknown>): string {
   return Object.entries(roles)
     .filter(([, value]) => typeof value === "string")
-    .map(([name, value]) => `  --${kebab(name)}: ${value as string};`)
+    .map(([name, value]) => `  --${kebab(name)}: var(--ardia-${kebab(name)}, ${value as string});`)
     .join("\n");
 }
 
-function scaleVars(prefix: string, scale: Record<string, number | string | { fontSize: number }>): string {
+function scaleVars(prefix: string, scale: Record<string, number | string | { fontSize: number }>, live = false): string {
   return Object.entries(scale)
     .map(([name, value]) => {
       const v = typeof value === "object" ? `${value.fontSize}px` : typeof value === "number" ? `${value}px` : value;
-      return `  --${prefix}-${kebab(name)}: ${v};`;
+      return `  --${prefix}-${kebab(name)}: ${live ? `var(--ardia-${prefix}-${kebab(name)}, ${v})` : v};`;
     })
     .join("\n");
 }
@@ -49,10 +49,12 @@ const css = `:root {
 ${scaleVars("part", parts)}
   --shadow-bar: ${ntpShadow};
 ${scaleVars("space", space)}
-${scaleVars("radius", radius)}
-${scaleVars("font", sizes)}
+${scaleVars("radius", radius, true)}
+${scaleVars("font", sizes, true)}
 ${scaleVars("line", lines)}
-${scaleVars("weight", weight)}
+${scaleVars("weight", weight, true)}
+  --font-face: var(--ardia-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif);
+  --font-mono: var(--ardia-font-mono, ui-monospace, "SF Mono", Menlo, monospace);
 }
 :root, :root[data-theme="light"] {
 ${roleVars(colorRoles.light)}

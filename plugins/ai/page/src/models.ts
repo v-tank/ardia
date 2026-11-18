@@ -51,9 +51,15 @@ export function withTags(text: string, tags: readonly TagRef[]): string {
   return `${text}${TAG_LINE}${tags.map((t) => `${t.title.replace(/[\n⟦⟧]/g, " ").slice(0, 80)} (tab ${t.id})`).join("; ")}`;
 }
 
-export function splitTags(text: string): { text: string; tags: string[] } {
+export function splitTags(text: string): { text: string; tags: { title: string; id: string | null }[] } {
   const at = text.lastIndexOf(TAG_LINE);
   if (at < 0) return { text, tags: [] };
   const tail = text.slice(at + TAG_LINE.length);
-  return { text: text.slice(0, at), tags: tail.split("; ").map((t) => t.replace(/\s*\(tab [^)]*\)$/, "")) };
+  return {
+    text: text.slice(0, at),
+    tags: tail.split("; ").map((t) => {
+      const id = /\s*\(tab ([^)]*)\)$/.exec(t);
+      return { title: id ? t.slice(0, id.index) : t, id: id?.[1] ?? null };
+    }),
+  };
 }
