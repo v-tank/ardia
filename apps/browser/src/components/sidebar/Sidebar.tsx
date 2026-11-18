@@ -113,7 +113,6 @@ export function Sidebar({ width }: { width: number }) {
                     resting={!!page.resting}
                     dockAbove={dockAbove}
                     height={Math.max(0, available - (field === "top" ? GLOW_ROOM : 0))}
-                    rows={page.id === current ? undefined : Math.ceil(available / rowPitch()) + 1}
                     geometry={page.id === current ? geometry : undefined}
                     onScrollView={onScrollView}
                     onScrollY={onScrollY}

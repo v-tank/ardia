@@ -8,7 +8,6 @@ import { groupEntries, holdsTab, keptEntries, sidebarEntries } from "./entries";
 import { shownPinnedEntries } from "./pinnedFold";
 import { entryId, entryKey } from "./entryKey";
 import { pinSection } from "../browser/model";
-import { windowRootSize } from "../windows/rootSize";
 
 const GROUP_BORDER = SIDEBAR_GROUP.border;
 
@@ -35,20 +34,7 @@ export function entriesHeight(s: BrowserState, windowId: string, profileId: stri
   return entries.reduce((sum, e) => sum + entryHeight(s, windowId, profileId, e) + SIDEBAR_ROW.gap, 0) - (entries.length ? SIDEBAR_ROW.gap : 0);
 }
 
-export function entriesWithin(s: BrowserState, windowId: string, profileId: string, entries: string[], height: number): number {
-  let top = 0;
-  let n = 0;
-  while (n < entries.length && top < height) top += entryHeight(s, windowId, profileId, entries[n++]!) + SIDEBAR_ROW.gap;
-  return n;
-}
-
-const EAGER_FIRST_PAINT_ENTRIES = 64;
 export const FIRST_PAINT_HEIGHT = 2400;
-
-export function firstPaintEntries(s: BrowserState, windowId: string, profileId: string, entries: string[], lazy: boolean): number {
-  if (!lazy) return EAGER_FIRST_PAINT_ENTRIES;
-  return Math.max(1, entriesWithin(s, windowId, profileId, entries, windowRootSize(s, windowId)?.height ?? FIRST_PAINT_HEIGHT));
-}
 
 export const startsOffScreen = (lazy: boolean, current: boolean) => lazy && !current;
 
@@ -88,16 +74,10 @@ export function rowSpan(
 
 export const entryHeightNow = (windowId: string, profileId: string, entry: string): number => entryHeight(useBrowser.getState(), windowId, profileId, entry);
 
-export const firstPaintEntriesNow = (windowId: string, profileId: string, entries: string[], lazy: boolean): number =>
-  firstPaintEntries(useBrowser.getState(), windowId, profileId, entries, lazy);
-
 export function foldedGroupHeight(windowId: string, profileId: string, groupId: string): number {
   const s = useBrowser.getState();
   return GROUP_BORDER * 2 + SIDEBAR_ROW.height + stackHeight(s, windowId, profileId, keptEntries(s, windowId, profileId, groupId));
 }
-
-export const usePendingEntriesHeight = (windowId: string, profileId: string, entries: string[], from: number, growing: boolean): number =>
-  useBrowser((s) => (growing ? entriesHeight(s, windowId, profileId, entries.slice(from)) : 0));
 
 export type RevealSpot = { span: { section: Section; top: number; height: number } } | { keys: string[] } | null;
 

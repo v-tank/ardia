@@ -21,9 +21,12 @@ export type ItemSpec = { tabIds: string[]; section: Section; parentGroup?: strin
   | ({ kind: "live"; liveFolderId: string } & Folding)
 );
 
+export type ItemPlace = { top: number; height: number; header: number };
+
 export type Item = ItemSpec & {
   key: string;
   view: View | null;
+  place: ItemPlace | null;
   header: View | null;
   gap: Animated.Value;
   size: Animated.Value;

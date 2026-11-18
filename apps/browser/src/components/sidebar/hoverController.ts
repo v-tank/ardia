@@ -84,6 +84,16 @@ export function useRowHover(windowId: string, rowTarget: Target | null) {
       },
     }),
   );
+  const shownTarget = useRef(rowTarget?.id);
+  useEffect(() => {
+    const was = shownTarget.current;
+    if (was === rowTarget?.id) return;
+    shownTarget.current = rowTarget?.id;
+    inside.current = null;
+    setHovered(false);
+    watchCovered(windowId, refresh, false);
+    if (was) releaseAnchor(windowId, was);
+  }, [rowTarget?.id]);
   const shownAway = useRef(away);
   useEffect(() => {
     if (shownAway.current === away) return;

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState, type RefObject } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Animated, View } from "react-native";
 import { radius, space, Symbol, Text } from "../ui";
 import { layout, useTheme } from "../ui/theme";
@@ -13,24 +13,28 @@ import { PinnedSectionHeader } from "./PinnedSectionHeader";
 import { DragScope, useDragController, useDragItem } from "./DragProvider";
 import { Fold, useFold } from "./Fold";
 import { SidebarEntry } from "./GroupBlock";
-import { GhostSlot, ListMotionContext, useListMotion } from "./ListMotion";
+import { GhostSlot, ListMotionContext, useListMotion, type ListSlot } from "./ListMotion";
 import { PinnedGrid } from "./PinnedGrid";
 import { usePinnedSequence } from "../../state/sidebar/pinnedOrder";
 import { SCROLL_EDGE } from "./ScrollEdge";
-import { entryHeightNow, firstPaintEntriesNow, usePendingEntriesHeight } from "../../state/sidebar/geometry";
+import { entryHeightNow, FIRST_PAINT_HEIGHT } from "../../state/sidebar/geometry";
 import { INCOGNITO_ICON } from "../ntp/IncognitoHeading";
-import { rowPitch, ROWS_PER_FRAME, type SidebarGeometry } from "./pageLayout";
+import { rowPitch, type SidebarGeometry } from "./pageLayout";
 import { NewTabRow } from "./NewTabRow";
 import { CleanUpUpsell } from "./CleanUpUpsell";
 import { sidebarTokens, TAB_ROW } from "./tokens";
 import { tailKey } from "./dragModel";
 import type { ListViewport } from "./listViewport";
+import { useListWindow, type ListWindow } from "./useListWindow";
+import { useModelDragItems } from "./modelDragItems";
+import { keepSlots } from "./listWindow";
+import { entryId } from "../../state/sidebar/entryKey";
+import { windowRootHeightNow } from "../../state/sidebar/listWindow";
 
 type PageRowsProps = {
   windowId: string;
   profileId: string;
   current: boolean;
-  rows: number | undefined;
   lazy: boolean;
   offScreen: boolean;
   tiles: string[];
@@ -46,22 +50,9 @@ type PageRowsProps = {
 
 const DOCKED_TILES_GAP = SCROLL_EDGE.gap + SCROLL_EDGE.line + SCROLL_EDGE.inset;
 
-export function PageRows({ windowId, profileId, current, rows, lazy, offScreen, tiles, underDockedTiles, innerWidth, inlineNewTab, controller, geometry, regions, viewport, onListHeight }: PageRowsProps) {
+export function PageRows({ windowId, profileId, current, lazy, offScreen, tiles, underDockedTiles, innerWidth, inlineNewTab, controller, geometry, regions, viewport, onListHeight }: PageRowsProps) {
   const [captured] = useState(newCapture);
   const { list: all } = useCapturedSidebarEntries(windowId, profileId, captured);
-  const [mountedRows, setMountedRows] = useState(() => firstPaintEntriesNow(windowId, profileId, all, lazy));
-  const [visited, setVisited] = useState(current);
-  if (current && !visited) setVisited(true);
-  const cap = offScreen ? 0 : visited ? undefined : rows;
-  const growing = cap === undefined && mountedRows < all.length;
-  useEffect(() => {
-    if (!growing) return;
-    const frame = requestAnimationFrame(() => setMountedRows((n) => (n + ROWS_PER_FRAME >= all.length ? Infinity : n + ROWS_PER_FRAME)));
-    return () => cancelAnimationFrame(frame);
-  }, [growing, mountedRows, all.length]);
-  const limit = cap ?? (growing ? mountedRows : undefined);
-  const list = limit === undefined ? all : all.slice(0, limit);
-  const pending = usePendingEntriesHeight(windowId, profileId, all, mountedRows, growing);
   const showClear = useSettings((s) => s.showClearButton);
   const clearable = showClear && !offScreen && all.length > 0;
   const tidyTabs = useSettings((s) => s.tidyTabs);
@@ -75,7 +66,29 @@ export function PageRows({ windowId, profileId, current, rows, lazy, offScreen, 
   const pinnedGap = collapsed && !kept && !pinnedFold.moving ? 0 : layout.rowGap;
   const newTabButtonAtTop = useNewTabAtTop();
   const animated = current && !offScreen;
-  const motion = useListMotion(windowId, profileId, all, captured, animated, viewport, newTabButtonAtTop && inlineNewTab ? rowPitch() : 0);
+  const above = newTabButtonAtTop && inlineNewTab ? rowPitch() : 0;
+  const motion = useListMotion(windowId, profileId, all, captured, animated, viewport, above);
+  const [rootHeight] = useState(() => windowRootHeightNow(windowId));
+  const windowed = useListWindow({
+    windowId,
+    profileId,
+    list: offScreen ? NO_ENTRIES : all,
+    viewport,
+    above,
+    current,
+    firstPaint: lazy ? (rootHeight ?? FIRST_PAINT_HEIGHT) : FIRST_PAINT_HEIGHT,
+    marks: controller?.marks,
+    moving: motion.sliding,
+  });
+  const list = offScreen ? NO_ENTRIES : (windowed?.mounted ?? all);
+  useModelDragItems(windowId, profileId, offScreen ? NO_ENTRIES : all, windowed, above);
+  const slots: ListSlot[] = motion.fading ? motion.slots(list) : list.map((entry) => ({ entry }));
+  const rowSlots = useRef(new Map<string, number>());
+  rowSlots.current = windowed ? keepSlots(list.filter((e) => entryId(e, "tab") !== null), rowSlots.current) : new Map();
+  const keyOf = (entry: string) => {
+    const slot = rowSlots.current.get(entry);
+    return slot === undefined ? entry : `row:${slot}`;
+  };
   const scope = useMemo(() => ({ slideBelow: motion.slideBelow }), [motion.slideBelow]);
   const pinnedHeaderRegion = useCallback((view: View | null) => void controller?.regions.set("pinnedHeader", view), [controller]);
   if (geometry) geometry.current.newTabAtTop = newTabButtonAtTop && inlineNewTab;
@@ -122,20 +135,20 @@ export function PageRows({ windowId, profileId, current, rows, lazy, offScreen, 
           ref={(v) => {
             controller?.regions.set("list", v);
           }}
-          onLayout={(e) => void (regions.list = e.nativeEvent.layout.y)}
+          onLayout={(e) => {
+            regions.list = e.nativeEvent.layout.y;
+            viewport?.changed();
+          }}
           style={{ gap: layout.rowGap }}
         >
           {newTabButtonAtTop && inlineNewTab ? <NewTabRow windowId={windowId} /> : null}
-          {motion.fading
-            ? motion.slots(list).map((slot) =>
-                "ghost" in slot ? (
-                  <GhostSlot key={slot.ghost.key} snapshot={slot.ghost.snapshot} top={slot.top} opacity={slot.ghost.opacity} />
-                ) : (
-                  <SidebarEntry key={slot.entry} entry={slot.entry} section="list" motion={motion.motion(slot.entry)} />
-                ),
-              )
-            : list.map((entry) => <SidebarEntry key={entry} entry={entry} section="list" motion={motion.motion(entry)} />)}
-          {pending ? <View style={{ height: pending }} /> : null}
+          {withSpacers(slots, windowed, (slot) =>
+            "ghost" in slot ? (
+              <GhostSlot key={slot.ghost.key} snapshot={slot.ghost.snapshot} top={slot.top} opacity={slot.ghost.opacity} />
+            ) : (
+              <SidebarEntry key={keyOf(slot.entry)} entry={slot.entry} section="list" motion={motion.motion(slot.entry)} />
+            ),
+          )}
           <Tail section="list" />
           {!newTabButtonAtTop && inlineNewTab ? <NewTabRow windowId={windowId} shift={motion.tail} clip={motion.tailClip} /> : null}
         </View>
@@ -143,6 +156,30 @@ export function PageRows({ windowId, profileId, current, rows, lazy, offScreen, 
       </View>
     </ListMotionContext.Provider>
   );
+}
+
+const NO_ENTRIES: string[] = [];
+
+function withSpacers(slots: ListSlot[], windowed: ListWindow | null, draw: (slot: ListSlot) => ReactNode): ReactNode[] {
+  if (!windowed) return slots.map(draw);
+  const out: ReactNode[] = [];
+  const spaced = new Set<string>();
+  let trailing = windowed.after > 0;
+  const space = (key: string, height: number) => out.push(<View key={key} style={{ height }} />);
+  for (const slot of slots) {
+    const anchor = "ghost" in slot ? slot.ghost.anchor : slot.entry;
+    if (anchor === null) {
+      if (trailing) space("space:end", windowed.after);
+      trailing = false;
+    } else if (!spaced.has(anchor)) {
+      spaced.add(anchor);
+      const height = windowed.before.get(anchor);
+      if (height) space(`space:${anchor}`, height);
+    }
+    out.push(draw(slot));
+  }
+  if (trailing) space("space:end", windowed.after);
+  return out;
 }
 
 const Tail = memo(function Tail({ section }: { section: "list" | "pinnedGroups" }) {

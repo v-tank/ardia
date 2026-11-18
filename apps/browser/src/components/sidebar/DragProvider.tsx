@@ -53,6 +53,7 @@ export function DragScope({ enabled, children }: { enabled: boolean; children: R
 }
 
 export const useDragController = () => useContext(DragContext) ?? undefined;
+export const usePageDragItems = () => useContext(DragItemsContext);
 export const useDropInto = (groupId: string) => useStore(useContext(DragContext)?.marks ?? noDragMarks, (m) => m.dropInto === groupId);
 export const useDropOnto = (key: string) => useStore(useContext(DragContext)?.marks ?? noDragMarks, (m) => m.onto === key);
 export const useDropPins = () => useStore(useContext(DragContext)?.marks ?? noDragMarks, (m) => m.pins);

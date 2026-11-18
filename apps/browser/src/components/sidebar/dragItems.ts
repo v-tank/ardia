@@ -13,7 +13,7 @@ export class DragItems {
 
   add(key: string, item: Item) {
     this.own.set(key, item);
-    if (this.live) this.controller.items.set(key, item);
+    if (this.live) this.controller.adopt(key, item);
     return () => {
       if (this.own.get(key) === item) this.own.delete(key);
       this.withdraw(key, item);
@@ -25,7 +25,7 @@ export class DragItems {
     this.live = live;
     for (const [key, item] of this.own) {
       if (live) {
-        this.controller.items.set(key, item);
+        this.controller.adopt(key, item);
         continue;
       }
       if (this.controller.active) {

@@ -82,7 +82,9 @@ export const TabRow = memo(function TabRow({
   const { backToPinHint, quiet } = useSidebarRowLook();
   const unread = useTabUnread(tabId);
   const badged = useTabBadged(tabId);
-  const [unreadDrawn, setUnreadDrawn] = useState(false);
+  const [drawnFor, setDrawnFor] = useState<string | null>(null);
+  const unreadDrawn = drawnFor === tabId;
+  const setUnreadDrawn = useCallback((on: boolean) => setDrawnFor((was) => (on ? tabId : was === tabId ? null : was)), [tabId]);
   const showsUnread = !!unread || unreadDrawn;
   const resettable = !!tab && (isPinnedRow(tab) || !tab.pin) && awayFromPin(tab);
   const pinActionMotion = usePressScaleMotion(resettable, buttonMotion.iconPressScale);
@@ -172,7 +174,7 @@ export const TabRow = memo(function TabRow({
               {loading || showsUnread ? (
                 <>
                   {loading && <ActivitySpinner style={{ width: 12, height: 12, marginRight: space.xxs }} />}
-                  {showsUnread && <UnreadCount unread={unread} ink={active ? theme.rowSelectedText : theme.textTab} onDrawn={setUnreadDrawn} />}
+                  {showsUnread && <UnreadCount key={tabId} unread={unread} ink={active ? theme.rowSelectedText : theme.textTab} onDrawn={setUnreadDrawn} />}
                 </>
               ) : null}
             </HoverSlot>

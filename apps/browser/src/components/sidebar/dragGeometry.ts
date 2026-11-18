@@ -26,6 +26,7 @@ export type DragSession = {
   external: number;
   escapable: boolean;
   scrollTimer: ReturnType<typeof setInterval> | undefined;
+  baseline: Map<string, [Frame | null, Frame | null]>;
   hold: { key: string | null; ready: string | null; timer: ReturnType<typeof setTimeout> | undefined };
 };
 
@@ -48,6 +49,7 @@ export const newDragSession = (sources: Item[], pointer: { x: number; y: number 
   external: 0,
   escapable: false,
   scrollTimer: undefined,
+  baseline: new Map(),
   hold: { key: null, ready: null, timer: undefined },
 });
 
@@ -71,6 +73,35 @@ export class DragGeometry {
 
   protected get drag(): DragSession {
     return this.session!;
+  }
+
+  protected placed(i: Item, regionFrames: Map<string, Frame | null>): [Frame | null, Frame | null] {
+    const area = i.place ? regionFrames.get(i.section) : null;
+    if (!i.place || !area) return [null, null];
+    const frame = { x: area.x, y: area.y + i.place.top, w: area.w, h: i.place.height };
+    return [frame, i.place.header ? { ...frame, h: i.place.header } : null];
+  }
+
+  protected undisplaced(f: Frame | null, key: string): Frame | null {
+    if (!f) return null;
+    const { gapKey, pitch, sources } = this.drag;
+    const gap = gapKey && gapKey !== key ? this.items.get(gapKey) : undefined;
+    const opened = gap?.frame && gap.section !== "tiles" ? gap.frame.y : null;
+    const closing = sources
+      .filter((s) => s.kind !== "tile" && s.frame && s.key !== key)
+      .map((s) => ({ y: s.frame!.y, h: s.frame!.h + (s.parentGroup ? 0 : layout.rowGap) }))
+      .sort((a, b) => a.y - b.y);
+    const shift = (top: number) => (opened !== null && opened <= top ? pitch : 0) - closing.reduce((n, s) => n + (s.y < top ? s.h : 0), 0);
+    let base: number | null = null;
+    let closed = 0;
+    for (let k = 0; k <= closing.length; k++) {
+      if (k) closed += closing[k - 1]!.h;
+      for (const open of [0, pitch]) {
+        const top = f.y + closed - open;
+        if (Math.abs(top + shift(top) - f.y) < 0.5 && (base === null || top > base)) base = top;
+      }
+    }
+    return { ...f, y: base ?? f.y };
   }
 
   protected still(i: Item): boolean {

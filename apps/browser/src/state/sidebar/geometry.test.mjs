@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 const { useBrowser } = await import("../browser/store.ts");
 const { sidebarEntries } = await import("./entries.ts");
-const { entriesHeight, entriesWithin, entryHeight, firstPaintEntries, rowSpan, startsOffScreen, FIRST_PAINT_HEIGHT } = await import("./geometry.ts");
+const { entriesHeight, entryHeight, rowSpan, startsOffScreen } = await import("./geometry.ts");
 const { groupEntries } = await import("./entries.ts");
 const { GROUP_MEMBERS_PAD_BOTTOM: PAD } = await import("../../lib/sidebarMetrics.ts");
 await import("../../test-native/index.ts");
@@ -28,48 +28,9 @@ function hydrate({ collapsed = false, nested = null, active = "t0" } = {}) {
   return sidebarEntries(S(), "w", "default").list;
 }
 
-test("entriesWithin counts the entries that start inside the height, a group as its whole block", () => {
-  const list = hydrate();
-  assert.deepEqual(list.slice(0, 4), ["t:t0", "t:t1", "g:g", "t:t7"]);
-  const s = S();
-  const pitch = entryHeight(s, "w", "default", "t:t0") + 3;
-  assert.equal(entriesWithin(s, "w", "default", list, 0), 0);
-  assert.equal(entriesWithin(s, "w", "default", list, 1), 1);
-  assert.equal(entriesWithin(s, "w", "default", list, pitch), 1);
-  assert.equal(entriesWithin(s, "w", "default", list, pitch + 1), 2);
-  const group = entryHeight(s, "w", "default", "g:g");
-  assert.ok(group > 5 * pitch);
-  assert.equal(entriesWithin(s, "w", "default", list, 2 * pitch + 1), 3);
-  assert.equal(entriesWithin(s, "w", "default", list, 2 * pitch + group + 3), 3);
-  assert.equal(entriesWithin(s, "w", "default", list, 2 * pitch + group + 4), 4);
-  assert.equal(entriesWithin(s, "w", "default", list, 1e6), list.length);
-});
-
-test("the entries within a height cover it: the rest start below it", () => {
-  const list = hydrate({ collapsed: true });
-  const s = S();
-  for (const height of [10, 100, 333, 800, 1300]) {
-    const n = entriesWithin(s, "w", "default", list, height);
-    assert.ok(n === list.length || entriesHeight(s, "w", "default", list.slice(0, n)) + 3 >= height, `height ${height}`);
-    assert.ok(n === 0 || entriesHeight(s, "w", "default", list.slice(0, n - 1)) + (n > 1 ? 3 : 0) < height, `height ${height}`);
-  }
-});
-
-test("lazySidebarRows on: a page first mounts the entries its window's saved frame shows", () => {
-  const list = hydrate();
-  const s = S();
-  const n = firstPaintEntries(s, "w", "default", list, true);
-  assert.equal(n, entriesWithin(s, "w", "default", list, 800));
-  assert.ok(n > 0 && n < list.length);
-  S().hydrate({ ...s, windows: { w: { ...s.windows.w, frame: undefined } } });
-  assert.equal(firstPaintEntries(S(), "w", "default", list, true), entriesWithin(S(), "w", "default", list, FIRST_PAINT_HEIGHT));
+test("lazySidebarRows starts only the pages beside the shown one off screen", () => {
   assert.equal(startsOffScreen(true, false), true);
   assert.equal(startsOffScreen(true, true), false);
-});
-
-test("lazySidebarRows off: 64 entries at first, and no page waits", () => {
-  const list = hydrate();
-  assert.equal(firstPaintEntries(S(), "w", "default", list, false), 64);
   assert.equal(startsOffScreen(false, false), false);
   assert.equal(startsOffScreen(false, true), false);
 });

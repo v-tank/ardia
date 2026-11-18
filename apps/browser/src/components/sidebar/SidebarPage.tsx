@@ -43,13 +43,12 @@ type PageProps = {
   resting: boolean;
   dockAbove: number;
   height: number;
-  rows: number | undefined;
   geometry: RefObject<SidebarGeometry> | undefined;
   onScrollView: (view: ScrollView | null) => void;
   onScrollY: (y: number) => void;
 };
 
-export const SidebarPage = memo(function SidebarPage({ profileId, slot, paging, width, current, resting, dockAbove, height, rows, geometry, onScrollView, onScrollY }: PageProps) {
+export const SidebarPage = memo(function SidebarPage({ profileId, slot, paging, width, current, resting, dockAbove, height, geometry, onScrollView, onScrollY }: PageProps) {
   const windowId = useWindowId();
   const topGap = listTopGap(useSidebarField() === "top");
   const pinnedShown = useSidebarPart("pinned");
@@ -226,7 +225,6 @@ export const SidebarPage = memo(function SidebarPage({ profileId, slot, paging, 
                           windowId={windowId}
                           profileId={profileId}
                           current={current}
-                          rows={rows}
                           lazy={lazy}
                           offScreen={offScreen}
                           tiles={scrolledTiles}

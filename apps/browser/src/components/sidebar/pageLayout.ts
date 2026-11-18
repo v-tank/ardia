@@ -4,7 +4,6 @@ import type { Section } from "../../state/sidebar/geometry";
 export const GLOW_ROOM = 24;
 export const rowPitch = () => layout.rowHeight + layout.rowGap;
 export const DOCKED_ROW_PAD = 6;
-export const ROWS_PER_FRAME = 32;
 export const DOCK_SHARE = 0.4;
 
 export type SidebarGeometry = { viewport: number; regions: Record<Section, number>; newTabAtTop: boolean; tilesFixed: boolean; edgeLift?: number; laidOut?: () => void };
