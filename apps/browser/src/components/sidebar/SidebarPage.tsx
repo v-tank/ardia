@@ -28,6 +28,7 @@ import { DOCK_SHARE, DOCKED_ROW_PAD, GLOW_ROOM, pageLayout, tilesFitDock, type S
 import { PageRows } from "./PageRows";
 import { NewTabRow } from "./NewTabRow";
 import { SelectedRowPill, useSelectedRowAway } from "./SelectedRowPill";
+import { createListViewport } from "./listViewport";
 
 const NONE: string[] = [];
 type PageGeometry = { scrollY: number; viewport: number; regions: SidebarGeometry["regions"] };
@@ -116,6 +117,13 @@ export const SidebarPage = memo(function SidebarPage({ profileId, slot, paging, 
   windowRef.current = windowId;
   const page = useRef<PageGeometry>({ scrollY: 0, viewport: 0, regions: { pinnedGroups: 0, list: 0 } }).current;
   const scrollView = useRef<ScrollView | null>(null);
+  const [listViewport] = useState(() =>
+    createListViewport(() => {
+      if (!page.viewport) return null;
+      const top = page.scrollY - LIST_PAD - page.regions.list;
+      return { top, bottom: top + page.viewport };
+    }),
+  );
   useLayoutEffect(() => {
     if (!current) return;
     onScrollView(scrollView.current);
@@ -138,6 +146,7 @@ export const SidebarPage = memo(function SidebarPage({ profileId, slot, paging, 
         scrollEdgeBelow.measure({ offset: page.scrollY });
         selectedRow.judge();
         if (!isCurrent.current) return;
+        listViewport.changed();
         noteRowsScrolled(windowRef.current);
         onScrollY(page.scrollY);
       },
@@ -198,6 +207,7 @@ export const SidebarPage = memo(function SidebarPage({ profileId, slot, paging, 
                           page.viewport = e.nativeEvent.layout.height;
                           scrollEdgeBelow.measure({ viewport: page.viewport });
                           selectedRow.relocate();
+                          listViewport.changed();
                           if (!geometry) return;
                           geometry.current.viewport = page.viewport;
                           geometry.current.laidOut?.();
@@ -226,6 +236,7 @@ export const SidebarPage = memo(function SidebarPage({ profileId, slot, paging, 
                           controller={liveDrag}
                           geometry={geometry}
                           regions={page.regions}
+                          viewport={listViewport}
                           onListHeight={reportList}
                         />
                         <ContextMenuArea style={{ flexGrow: 1, minHeight: inlineNewTab ? 24 : 0 }} onContextMenu={() => void openSidebarMenu(windowId)}>
