@@ -3,7 +3,7 @@
 //
 //   scripts/agent/ac launch <app> [--data DIR] [--port N] [--js pinned|live|none|host:port] [--env K=V]…
 //                               [--instance K=V]… [--test K[=V]]… [--trace AREA]… [--switch S]…
-//                               [--session FILE.json] [--onboarded] [--no-wait] [--runs-from APP] [--arg A]…
+//                               [--session FILE.json] [--onboarded] [--no-wait] [--no-devtools] [--runs-from APP] [--arg A]…
 //   scripts/agent/ac eval   <data dir> '<body>' [--timeout MS]   the dev harness: `return …` (a promise is awaited)
 //   scripts/agent/ac page   <data dir> <url part> '<expression>'  a page's DevTools Runtime.evaluate (awaited, by value)
 //   scripts/agent/ac quit   <data dir> [--kill]                   the app's quit, then SIGTERM, then SIGKILL
@@ -15,7 +15,9 @@
 // `open -g -n`) with Metro pinned by default (a proxy that refuses reloads: other agents' edits don't restart it).
 // --instance, --test and --trace fill ARDIA_INSTANCE, ARDIA_TEST and ARDIA_TRACE (keys: docs/agent-brief.md); --switch
 // adds a Chrome switch (ARDIA_INSTANCE chromiumSwitches), --arg one launch argument (`--arg=-AppleLanguages --arg='(zh-Hans)'`
-// sets this instance's languages and nothing else's). A build from before ArdiaLaunchConfig gets the old variables.
+// sets this instance's languages and nothing else's). --no-devtools launches without a DevTools port (the pid comes from
+// Chrome's SingletonLock), so the app's own ardia-command token server can start, as plugins' browse needs.
+// A build from before ArdiaLaunchConfig gets the old variables.
 // Body or expression `-` reads stdin. Exit 1 on a failure, 3 when the instance has gone.
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -39,7 +41,7 @@ const flags = {}, positional = [];
 for (let i = 0; i < rest.length; i++) {
   const a = rest[i];
   if (!a.startsWith("--")) positional.push(a);
-  else if (["--onboarded", "--no-wait", "--kill"].includes(a)) flags[a.slice(2)] = true;
+  else if (["--onboarded", "--no-wait", "--kill", "--no-devtools"].includes(a)) flags[a.slice(2)] = true;
   else if (a.startsWith("--arg=")) (flags.arg ??= []).push(a.slice(6));
   else if (["--env", "--switch", "--instance", "--test", "--trace", "--arg"].includes(a)) (flags[a.slice(2)] ??= []).push(rest[++i]);
   else flags[a.slice(2)] = rest[++i];
@@ -60,7 +62,7 @@ try {
     if (!positional[0]) throw new Error("usage: ac launch <app> [--data DIR] …");
     const pairs = (list) => Object.fromEntries((list ?? []).map((kv) => (kv.includes("=") ? [kv.slice(0, kv.indexOf("=")), kv.slice(kv.indexOf("=") + 1)] : [kv, true])));
     const app = await launch(positional[0], {
-      data: flags.data, port: flags.port, js: flags.js, switches: flags.switch, onboarded: flags.onboarded,
+      data: flags.data, port: flags.port, devtools: !flags["no-devtools"], js: flags.js, switches: flags.switch, onboarded: flags.onboarded,
       env: mergeLaunchEnv(...(flags.env ?? []).map((kv) => pairs([kv]))),
       instance: pairs(flags.instance), test: pairs(flags.test), trace: flags.trace ?? [],
       session: flags.session ? JSON.parse(readFileSync(flags.session, "utf8")) : undefined, ready: !flags["no-wait"],

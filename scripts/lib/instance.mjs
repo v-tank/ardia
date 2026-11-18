@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readlinkSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, request as httpRequest } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { basename, dirname, join, resolve } from "node:path";
@@ -65,6 +65,14 @@ export function ownedCandidate(listeners, before, commandOf, binary) {
   if (before.has(pid)) throw new Error(`port listener ${pid} predates the launch`);
   if (!commandIsBinary(command, binary)) throw new Error(`port listener ${pid} is not ${binary}: ${command}`);
   return pid;
+}
+export function singletonPids(data) {
+  try {
+    const pid = Number(/-(\d+)$/.exec(readlinkSync(join(data, "Chromium", "SingletonLock")))?.[1]);
+    return pid > 0 && isAlive(pid) ? [pid] : [];
+  } catch {
+    return [];
+  }
 }
 export const realPath = (path) => { try { return realpathSync(path); } catch { return path; } };
 export function spawnedPids(binary, before, port, dataDirs) {
@@ -355,8 +363,8 @@ export async function launch(app, opts = {}) {
   for (const [name, text] of Object.entries(opts.files ?? {})) writeFileSync(join(data, name), typeof text === "string" ? text : JSON.stringify(text));
   const runsFrom = opts.runsFrom ? realPath(resolve(opts.runsFrom)) : app;
   const binary = join(runsFrom, "Contents/MacOS", basename(binaryOf(app)));
-  const port = opts.port ? parsePort(opts.port) : await freePort();
-  const busy = listenerPids(port);
+  const port = opts.devtools === false ? null : opts.port ? parsePort(opts.port) : await freePort();
+  const busy = port === null ? [] : listenerPids(port);
   if (busy.length) throw new Error(`DevTools port ${port} is already in use by pid ${busy.join(", ")}`);
   const metroPort = Number(opts.metroPort ?? process.env.METRO_PORT ?? 8081);
   const jsMode = opts.js ?? "pinned";
@@ -369,7 +377,7 @@ export async function launch(app, opts = {}) {
   const location = jsMode === "pinned" ? `localhost:${js.port}` : jsMode === "live" ? `localhost:${metroPort}` : jsMode === "none" ? null : jsMode;
   const switches = [opts.switches].flat().filter(Boolean).join(" ");
   const env = appEnv(app, mergeLaunchEnv({
-    ARDIA_BACKGROUND: "1", ARDIA_DATA_DIR: data, ARDIA_REMOTE_DEBUGGING_PORT: String(port),
+    ARDIA_BACKGROUND: "1", ARDIA_DATA_DIR: data, ARDIA_REMOTE_DEBUGGING_PORT: port === null ? null : String(port),
     ...launchVariables({
       instance: { ...(location ? { jsLocation: location } : {}), ...(switches ? { chromiumSwitches: switches } : {}), ...opts.instance },
       test: opts.test, trace: opts.trace, switchOverrides: opts.switchOverrides,
@@ -384,9 +392,11 @@ export async function launch(app, opts = {}) {
   try {
     for (const end = Date.now() + (opts.startTimeout ?? 60000); !owned && Date.now() < end; await sleep(100)) {
       let info;
-      const pid = ownedCandidate(listenerPids(port), before, (p) => (info = processInfo(p))?.command, binary);
+      const candidates = port === null ? singletonPids(data) : listenerPids(port);
+      const pid = ownedCandidate(candidates, before, (p) => (info = processInfo(p))?.command, binary);
       if (pid && info) owned = { pid, started: info.started };
     }
+    if (!owned && port === null) throw new Error(`the app didn't take ${join(data, "Chromium/SingletonLock")} within ${(opts.startTimeout ?? 60000) / 1000} s (log: ${log})`);
     if (!owned) throw new Error(`the app didn't listen on DevTools port ${port} within ${(opts.startTimeout ?? 60000) / 1000} s (log: ${log})`);
   } catch (e) {
     const dirs = [...new Set([data, realPath(data)])];
