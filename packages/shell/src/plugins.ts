@@ -30,6 +30,9 @@ export type PluginsNative = {
   revealLog(name: string): void;
   revealFolder(): void;
   devSnapshotPage(name: string, path: string): Promise<boolean>;
+  releasePage?(tabKey: string): void;
+  releasePluginPages?(name: string): void;
+  goPage?(tabKey: string, action: "back" | "forward" | "reload"): Promise<boolean>;
   addListener(name: "onLine", listener: (e: PluginLine) => void): EventSubscription;
   addListener(name: "onExit", listener: (e: PluginExit) => void): EventSubscription;
 };
@@ -40,6 +43,12 @@ export type PluginPageProps = ViewProps & {
   plugin: string;
   url: string;
   network: boolean;
+  look?: Record<string, string>;
+  colorScheme?: "dark" | "light";
   onOpenUrl?: (e: PluginPageEvent<{ url: string }>) => void;
   onLoaded?: (e: PluginPageEvent<{ url: string; title: string }>) => void;
+  onTitle?: (e: PluginPageEvent<{ title: string }>) => void;
+  onNavigate?: (e: PluginPageEvent<{ path: string; query: string; canGoBack: boolean; canGoForward: boolean }>) => void;
+  tabKey?: string;
+  glassTints?: Record<string, string>;
 };

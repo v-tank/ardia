@@ -56,7 +56,9 @@ export type CommandAction =
   | { open: "tab" | "split"; context: boolean; side: PageSide; sideSetting: string | null; path: string };
 export type CommandSpec = { name: string; title: string; icon: string; keywords: string[]; action: CommandAction };
 export type ToolSpec = { name: string; title: string; description: string; timeout: number };
-export type PageSpec = { title: string; icon: string; source: { file: string } | { served: true } };
+export const PAGE_BACKGROUNDS = ["card", "window"] as const;
+export type PageBackground = (typeof PAGE_BACKGROUNDS)[number];
+export type PageSpec = { title: string; icon: string; background: PageBackground; source: { file: string } | { served: true } };
 
 export type PluginManifest = {
   manifest: number;
@@ -246,7 +248,7 @@ function pageOf(c: Check, value: unknown): PageSpec | null {
   if (value === undefined) return null;
   const doc = object(c, "page", value);
   if (!doc) return null;
-  only(c, "page", doc, ["title", "icon", "file", "served"]);
+  only(c, "page", doc, ["title", "icon", "file", "served", "background"]);
   const title = text(c, "page.title", doc.title, LIMITS.pageTitle);
   const icon = matching(c, "page.icon", doc.icon, SYMBOL, "an SF Symbol name", false) ?? "puzzlepiece";
   const hasFile = doc.file !== undefined;
@@ -259,8 +261,10 @@ function pageOf(c: Check, value: unknown): PageSpec | null {
     c.problems.push("page.file must be a path inside the plugin's folder, like page/index.html");
     return null;
   }
-  if (!title) return null;
-  return { title, icon, source: hasFile ? { file: doc.file as string } : { served: true } };
+  const background = doc.background === undefined ? "card" : PAGE_BACKGROUNDS.find((b) => b === doc.background);
+  if (!background) c.problems.push(`page.background must be one of ${PAGE_BACKGROUNDS.join(", ")}`);
+  if (!title || !background) return null;
+  return { title, icon, background, source: hasFile ? { file: doc.file as string } : { served: true } };
 }
 
 function permissionsOf(c: Check, value: unknown): PluginPermission[] {

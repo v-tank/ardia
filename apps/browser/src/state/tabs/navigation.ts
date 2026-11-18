@@ -13,6 +13,7 @@ import { pageOf, patchPage, usePage } from "./pageState";
 import { historyOf } from "../history/history";
 import { adoptedPage, IDLE } from "./pageSession";
 import { isPeekTab } from "../peek/peek";
+import { goInPage } from "../plugins/pageNav";
 import { dismissPeek } from "../peek/actions";
 
 const store = () => useBrowser.getState();
@@ -49,6 +50,7 @@ export function goBack(tabId: string): void {
   if (livePageId(tabId) !== tabId) return void withLivePage(tabId, (_, id) => goBack(id));
   const live = store().live[tabId];
   if (pageOf(tabId).newTabShown) return;
+  if (goInPage(tabId, "back")) return;
   if (live?.canGoBack) return void webviews.get(tabId)?.goBack();
   if (pageOf(tabId).engineBack) return void goBackAcrossEngines(tabId);
   if (pageOf(tabId).backToNewTab) return showNewTab(tabId);
@@ -68,6 +70,7 @@ export function goBack(tabId: string): void {
 export function goForward(tabId: string): void {
   if (livePageId(tabId) !== tabId) return void withLivePage(tabId, (_, id) => goForward(id));
   if (pageOf(tabId).newTabShown) return hideNewTab(tabId);
+  if (goInPage(tabId, "forward")) return;
   void webviews.get(tabId)?.goForward();
 }
 

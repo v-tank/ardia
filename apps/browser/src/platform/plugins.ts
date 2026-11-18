@@ -17,5 +17,8 @@ export const runPluginBrowse = (name: string, argv: string[], timeoutMs: number)
 export const revealPluginLog = (name: string) => Plugins().revealLog(name);
 export const revealPluginsFolder = () => Plugins().revealFolder();
 export const devSnapshotPluginPage = (name: string, path: string) => Plugins().devSnapshotPage(name, path);
+export const releasePluginPage = (tabKey: string) => Plugins().releasePage?.(tabKey);
+export const releasePluginPages = (name: string) => Plugins().releasePluginPages?.(name);
+export const goPluginPage = (tabKey: string, action: "back" | "forward" | "reload") => Plugins().goPage?.(tabKey, action) ?? Promise.resolve(false);
 export const onPluginLine = (listener: (e: PluginLine) => void) => Plugins().addListener("onLine", listener);
 export const onPluginExit = (listener: (e: PluginExit) => void) => Plugins().addListener("onExit", listener);

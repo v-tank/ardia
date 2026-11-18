@@ -156,7 +156,12 @@ names the tab and `icon` its command bar entry. The tab's content is one of:
 - `"file": "page/index.html"`: a file in the plugin's folder, served as `ardia-plugin://<name>/page/index.html`.
   Only regular files inside the plugin's folder are served (checked after resolving links), at most 10 MB each, with
   their type from the extension; anything else is a 404.
-- `"served": true`: the helper serves it and tells Ardia where with `page.serve` (below). The URL must be
+- `"served": true`: the helper serves it and tells Ardia where with `page.serve` (below).
+
+`background` (optional) is what the page sits on: `"card"` (the default) is the tab's usual card, filled with the card
+color; `"window"` keeps the card's frame, edge and insets but fills it with Ardia's panel glass (Liquid Glass, tinted
+with the card color; the card color on a Mac without it), so a page with a transparent background shows the window's
+tinted glass through it. The URL must be
   `http://127.0.0.1:<port>/…`, `http://localhost:<port>/…` or `http://[::1]:<port>/…`. Until it arrives the tab says the
   plugin is starting.
 
@@ -171,8 +176,10 @@ page tab out of first place and the group is an ordinary group again.
 A page tab can have a path, `ardia://<name>/<path>?<query>` (`ardia://ai/history`, `ardia://ai/chats/42`): each path
 is its own tab, and opening one that's already open in the window goes to it. A file page gets the path and query as
 `ardiaPath`; a served page loads them on its helper's server. When a command hands the page a tab, the page's URL
-carries it as `ardiaContext`, a JSON object `{"tabId", "url", "title"}`. Navigation inside the page doesn't change the
-tab's address, title or back and forward yet (follow-up issue). While the plugin is off, changed or not running, the tab stays and says so, with a way to Settings; it is
+carries it as `ardiaContext`, a JSON object `{"tabId", "url", "title"}`. The tab follows the page (#2518): its
+address becomes `ardia://<name><path>?<query>` as the page navigates or calls `history.pushState`/`replaceState` (the host's own
+`ardiaContext` left out), its title follows `document.title` once the page sets one (an empty title never replaces a real
+one), and Back and Forward go through the page's own history first, then the tab's (back to the New Tab it replaced). While the plugin is off, changed or not running, the tab stays and says so, with a way to Settings; it is
 never sent to Chrome. A plugin with a page can't take the name of one of Ardia's or Chrome's own pages (`history`,
 `settings`, `flags`, `extensions`, … `lib/pluginNames.ts`).
 
@@ -378,7 +385,23 @@ whichever profile the tab's window shows:
 - **Its own storage.** Each plugin's page has its own website data store (`WKWebsiteDataStore(forIdentifier:)`, an id
   derived from the plugin's name), apart from every profile's cookies, logins and storage, the WebKit page engine's
   stores and other plugins' pages. Removing the plugin deletes it.
-- **Away from Ardia's interface.** It runs in WebKit's own processes with no script message handlers, so the page can't
+- **Ardia's look.** Before the page's first script runs, Ardia sets CSS variables on its root element, and updates them
+  when the look changes: `--ardia-<role>` for every color role of the window's theme (`--ardia-text-primary`,
+  `--ardia-go-button`, `--ardia-card`, … the names of `ColorRoles` in `components/ui/tokens.ts`, in kebab case),
+  `--ardia-window-tint-top` and `-bottom`, `--ardia-font-family`, `--ardia-font-mono`, `--ardia-font-<size>`,
+  `--ardia-weight-<name>`, `--ardia-radius-<name>` and `--ardia-glass` (`1` where real glass is available). The root
+  also gets `data-ardia-appearance` (`dark` or `light`) and a matching `color-scheme`, and the page view takes that
+  appearance, so `prefers-color-scheme` follows the window, not the system.
+- **Glass regions.** A page can ask for real Liquid Glass under parts of itself: it posts
+  `webkit.messageHandlers.ardiaGlass.postMessage({regions: [{id, x, y, width, height, radius, kind, state}]})` with
+  rectangles in the view's coordinates (at most 32; `kind` `control` or `panel`, `state` `rest`, `lit` or `active`),
+  and Ardia draws its own glass views behind the (transparent) page at those rectangles, tinted as its controls and
+  panels are, until the page posts again. The message carries rectangles only and is the page's only message handler;
+  a page on a Mac without Liquid Glass gets `--ardia-glass: 0` and should draw its own fills.
+- **No rubber band.** The page view never overscrolls as a whole document; a page's own scrolling elements still scroll.
+- **Kept alive.** A page tab's view stays alive while its tab is in the background (up to 12 per window session, the
+  oldest dropped first) and is shown again without reloading; it goes when the tab closes or the plugin stops.
+- **Away from Ardia's interface.** It runs in WebKit's own processes with no script message handler but `ardiaGlass`, so the page can't
   reach the interface's JavaScript, the store or any native call. It gets no camera, microphone or location, downloads
   are refused, and its JavaScript dialogs are ignored.
 - **Its network follows the plugin's.** Without `network`, the page's own requests (scripts, images, `fetch`,

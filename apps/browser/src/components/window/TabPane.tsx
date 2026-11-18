@@ -19,6 +19,8 @@ import { TabContentArea } from "./TabContentArea";
 import { InternalPage } from "../pages";
 import { ShareBar } from "../media/ShareBar";
 import { PluginBanner } from "../plugins/PluginBanner";
+import { usePageOnWindow } from "../../state/plugins/hooks";
+import { GlassFill, useGlass } from "../ui/Glass";
 import { PLATFORM_FEATURES } from "../../lib/platformFeatures";
 import { Toolbar, ToolbarBackdrop } from "../toolbar/Toolbar";
 import { AutoHideBackdrop, AutoHideToolbar, useToolbarMode, useToolbarMotion } from "../toolbar/AutoHideToolbar";
@@ -85,6 +87,8 @@ export const TabPane = memo(function TabPane({
   const theme = useProfileTheme(own.profileId);
   const toolbarHeight = useToolbarRow().height;
   const isNewTab = !own.url;
+  const glassPanes = useGlass("panes");
+  const onGlass = usePageOnWindow(own.url) && glassPanes;
   const emptyCard = useSettings((st) => isNewTab && newTabOpensOf(st) === "commandBar");
   const newTabShown = useStoreWhile(usePages, live, (s) => !!s.pages[tabId]?.newTabShown);
   const inSomeSplit = useBrowserWhile(!!warm, (s) => !!warm && !!splitOf(s, tabId));
@@ -135,9 +139,10 @@ export const TabPane = memo(function TabPane({
         borderRadius: fullscreen ? 0 : cardRadius,
         overflow: "hidden",
         opacity: covered ? 0 : 1,
-        backgroundColor: visible && !fullscreen && !seeThrough ? theme.card : undefined,
+        backgroundColor: visible && !fullscreen && !seeThrough && !onGlass ? theme.card : undefined,
       }}
     >
+      {onGlass && visible && !fullscreen && !seeThrough ? <GlassFill panelFill={theme.card} radius={cardRadius} theme={theme} /> : null}
       {bar.kind === "toolbar" && <Toolbar tabId={tabId} geometry={geometry} windowId={windowId} inSplit={inSplit} focused={focused || !inSplit} />}
       {bar.kind === "backdrop" && <ToolbarBackdrop tabId={tabId} />}
       {bar.kind === "spacer" && <View style={{ height: toolbarHeight }} />}

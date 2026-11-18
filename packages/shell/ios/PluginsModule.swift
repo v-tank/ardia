@@ -41,14 +41,25 @@ public class PluginsModule: Module {
 
     Function("revealFolder") { () in DispatchQueue.main.async { Self.revealFolder() } }
 
+    Function("releasePage") { (tabKey: String) in DispatchQueue.main.async { PluginPageView.release(tab: tabKey) } }
+
+    Function("releasePluginPages") { (name: String) in DispatchQueue.main.async { PluginPageView.releasePlugin(name) } }
+
+    AsyncFunction("goPage") { (tabKey: String, action: String) -> Bool in PluginPageView.go(tab: tabKey, action) }
+      .runOnQueue(.main)
+
     AsyncFunction("devSnapshotPage") { (name: String, path: String, promise: Promise) in Self.snapshot(name, path, promise) }
       .runOnQueue(.main)
 
     View(PluginPageView.self) {
-      Events("onOpenUrl", "onLoaded")
+      Events("onOpenUrl", "onLoaded", "onTitle", "onNavigate")
       Prop("plugin") { (view: PluginPageView, value: String) in view.plugin = value }
       Prop("url") { (view: PluginPageView, value: String) in view.url = value }
       Prop("network") { (view: PluginPageView, value: Bool) in view.network = value }
+      Prop("tabKey") { (view: PluginPageView, value: String?) in view.tabKey = value ?? "" }
+      Prop("glassTints") { (view: PluginPageView, value: [String: String]?) in view.glassTints = value ?? [:] }
+      Prop("look") { (view: PluginPageView, value: [String: String]?) in view.look = value ?? [:] }
+      Prop("colorScheme") { (view: PluginPageView, value: String?) in view.colorScheme = value ?? "" }
     }
 
     OnDestroy {

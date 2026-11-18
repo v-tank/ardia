@@ -24,8 +24,9 @@ export function InternalPage({ tabId }: { tabId: string }) {
     if (!page && !plugin) return;
     const t = currentTab(tabId);
     const title = page ? INTERNAL_PAGES[page].title : pluginTitle;
-    if (t && (t.url !== url || t.title !== title)) updateTab(tabId, { url, title, favicon: null });
-    updateLive(tabId, { isLoading: false, canGoBack: false, canGoForward: false });
+    const keepsOwnTitle = !!plugin && !!t?.title && t.url === url;
+    if (t && (t.url !== url || (t.title !== title && !keepsOwnTitle))) updateTab(tabId, { url, title, favicon: null });
+    updateLive(tabId, plugin ? { isLoading: false } : { isLoading: false, canGoBack: false, canGoForward: false });
     setPageProgress(tabId, 0);
   }, [page, plugin, pluginTitle, url]);
 

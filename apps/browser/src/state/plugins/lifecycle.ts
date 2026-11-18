@@ -1,5 +1,6 @@
 import { defaultValues, LIMITS, rowValue, type RowSpec } from "../../lib/pluginManifest";
-import { listPluginFolders, removePluginFiles, type PluginFolderEntry } from "../../platform/plugins";
+import { listPluginFolders, releasePluginPages, removePluginFiles, type PluginFolderEntry } from "../../platform/plugins";
+import { watchPluginPageTabs } from "./pageNav";
 import { systemInfo } from "../../platform/app";
 import { onConfigChange } from "../../platform/configFolder";
 import { useBrowser } from "../browser/store";
@@ -59,6 +60,7 @@ export function reconcilePlugins() {
 
 function withdraw(name: string) {
   dropCalls(name);
+  releasePluginPages(name);
   usePlugins.setState((s) => {
     const servedUrls = { ...s.servedUrls };
     delete servedUrls[name];
@@ -165,4 +167,5 @@ export function watchPluginFolder() {
   if (started) return;
   started = true;
   onConfigChange(() => void rescanPlugins());
+  watchPluginPageTabs();
 }

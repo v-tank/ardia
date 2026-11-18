@@ -5,6 +5,7 @@ import { faviconFailed, useAppearanceDark, useFavicon, useFaviconTheme } from ".
 import { radius, Symbol, useTheme, weight } from "../ui";
 import { typeFace } from "../ui/tokens";
 import { bundledSiteIcon } from "./siteIcons";
+import { usePluginPageIcon } from "../../state/plugins/hooks";
 
 export const Favicon = memo(function Favicon({
   url,
@@ -50,6 +51,8 @@ export const SiteFavicon = memo(function SiteFavicon({ host, profileId, size }: 
 
 export const FaviconFallback = memo(function FaviconFallback({ url, size = 16 }: { url: string; size?: number }) {
   const theme = useTheme();
+  const pageIcon = usePluginPageIcon(url);
+  if (pageIcon) return <Symbol name={pageIcon} size={size - 2} weight="medium" color={theme.icon} style={{ width: size, height: size }} />;
   const bundled = bundledSiteIcon(url, theme.dark);
   if (bundled !== undefined) return <Image source={bundled} style={{ width: size, height: size, borderRadius: size > 18 ? radius.control : radius.hair }} />;
   const initial = hostInitial(url);
