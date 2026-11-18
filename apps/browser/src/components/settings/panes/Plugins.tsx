@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View } from "react-native";
+import { ScrollView, View } from "react-native";
 import type { PluginManifest, RowSpec } from "../../../lib/pluginManifest";
 import { PLATFORM_FEATURES } from "../../../lib/platformFeatures";
 import { PLATFORM_TERMS } from "../../../lib/platformTerms";
@@ -21,9 +21,10 @@ import { usePluginActive, usePluginConsent, usePluginListing, usePluginNeedsRevi
 import { closeSettingsSheet, showSettingsSheet } from "../../../state/settings/sheet";
 import { goToSettingsPane, SETTINGS_WINDOW_ID, type SettingsPlace } from "../../../state/settings/settingsWindows";
 import { confirm } from "../../../state/app/system";
-import { Box, Button, DialogActions, DialogTitle, PopUp, Sheet, Symbol, Text, TextField, Toggle } from "../../ui";
+import { Button, DialogActions, DialogTitle, PopUp, Sheet, Symbol, Text, TextField, Toggle } from "../../ui";
 import { Group, Row, SectionHeader } from "../Form";
 import { useTheme } from "../../ui/theme";
+import { space } from "../../ui/tokens";
 import { PaneSubPage } from "./PaneSubPage";
 
 export function PluginsPane({ detail }: SettingsPlace) {
@@ -210,18 +211,18 @@ function ConsentSheet({ name, hash }: { name: string; hash: string }) {
       <DialogTitle icon={<Symbol name="puzzlepiece.fill" size={22} color={theme.icon} style={TITLE_ICON} />} subtitle={m?.description || undefined}>
         {`Turn on ${m?.title ?? name}?`}
       </DialogTitle>
-      <Box gap="s" pad="m">
+      <ScrollView style={CONSENT_LIST} contentContainerStyle={CONSENT_LINES}>
         {changed ? (
           <Text tone="textSecondary">The plugin changed while this was open. Close this and try again.</Text>
         ) : (
           consentLines(m).map((line) => (
-            <Box key={line.text} row gap="m">
-              <Symbol name={line.icon} size={13} color={theme.icon} style={ICON} />
+            <View key={line.text} style={CONSENT_LINE}>
+              <Symbol name={line.icon} size={13} color={theme.icon} style={TITLE_ICON_SLOT} />
               <Text style={LINE}>{line.text}</Text>
-            </Box>
+            </View>
           ))
         )}
-      </Box>
+      </ScrollView>
       <DialogActions>
         <Button title="Cancel" onPress={close} />
         <Button
@@ -240,3 +241,7 @@ function ConsentSheet({ name, hash }: { name: string; hash: string }) {
 const LINE = { flex: 1 } as const;
 const ICON = { width: 18, height: 18 } as const;
 const TITLE_ICON = { width: 28, height: 28 } as const;
+const TITLE_ICON_SLOT = { width: TITLE_ICON.width, height: 18 } as const;
+const CONSENT_LIST = { flexShrink: 1, marginTop: space.xl } as const;
+const CONSENT_LINES = { gap: space.m } as const;
+const CONSENT_LINE = { flexDirection: "row", alignItems: "flex-start", gap: space.l } as const;
